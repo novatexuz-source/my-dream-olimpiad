@@ -255,16 +255,22 @@ async def process_confirm(message: Message, state: FSMContext):
     
     @sync_to_async
     def create_participant():
+        from apps.registration.views import get_next_olympiad_date
         full_name = f"{data['last_name']} {data['first_name']}"
+        defaults = {
+            'full_name': full_name,
+            'phone': data['phone'],
+            'grade': data['grade'],
+            'subject': data['subject'],
+            'payment_type': data['payment_type'],
+        }
+        # Only auto-assign target_test_date for NEW participants (don't overwrite existing)
+        existing = Participant.objects.filter(telegram_id=str(message.from_user.id)).first()
+        if not existing:
+            defaults['target_test_date'] = get_next_olympiad_date()
         participant, created = Participant.objects.update_or_create(
             telegram_id=str(message.from_user.id),
-            defaults={
-                'full_name': full_name,
-                'phone': data['phone'],
-                'grade': data['grade'],
-                'subject': data['subject'],
-                'payment_type': data['payment_type']
-            }
+            defaults=defaults
         )
         
         payment, p_created = Payment.objects.get_or_create(

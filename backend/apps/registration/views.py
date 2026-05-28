@@ -1,6 +1,7 @@
 import random
 import string
 import requests
+from datetime import date as date_cls
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -9,10 +10,32 @@ from .models import Participant, Payment
 from .serializers import ParticipantSerializer
 from decouple import config
 
+
+def get_next_olympiad_date():
+    """Return the next upcoming olympiad date (earliest future Test date) or None."""
+    from apps.tests_app.models import Test
+    today = date_cls.today()
+    next_test = (
+        Test.objects
+        .filter(start_datetime__date__gte=today)
+        .order_by('start_datetime')
+        .first()
+    )
+    return next_test.start_datetime.date() if next_test and next_test.start_datetime else None
+
 class ParticipantViewSet(viewsets.ModelViewSet):
     queryset = Participant.objects.all().order_by('-registered_at')
     serializer_class = ParticipantSerializer
     permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        target_date = self.request.query_params.get('target_test_date')
+        if target_date == 'null':
+            qs = qs.filter(target_test_date__isnull=True)
+        elif target_date:
+            qs = qs.filter(target_test_date=target_date)
+        return qs
     
     def generate_unique_code(self):
         while True:
@@ -134,7 +157,8 @@ def public_register(request):
             phone=phone,
             grade=int(data['grade']),
             subject=data['subject'],
-            payment_type=data['payment_type']
+            payment_type=data['payment_type'],
+            target_test_date=get_next_olympiad_date(),
         )
         created = True
     

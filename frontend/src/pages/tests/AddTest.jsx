@@ -1,21 +1,42 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { API_BASE } from '../../config'
 import './AddTest.css'
 
+const formatPrefillDate = (dateStr) => {
+  if (!dateStr) return ''
+  const months = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
+    'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr']
+  const d = new Date(dateStr + 'T00:00:00')
+  return `${d.getDate()}-${months[d.getMonth()]}, ${d.getFullYear()}-yil`
+}
+
 export default function AddTest() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const prefilledSubject = searchParams.get('subject') || ''
+  const prefilledGrade = searchParams.get('grade')
+  const prefilledDate = searchParams.get('date') // YYYY-MM-DD
+
   const [subjects, setSubjects] = useState([])
   const [allTests, setAllTests] = useState([])
-  
+
+  // If date passed via URL, default to 10:00 - 12:00 on that day
+  const buildInitialDatetime = (dateStr, hour) => {
+    if (!dateStr) return ''
+    return `${dateStr}T${String(hour).padStart(2, '0')}:00`
+  }
+
   const [testData, setTestData] = useState({
-    subject: '',
-    grade: 1,
+    subject: prefilledSubject,
+    grade: prefilledGrade ? Number(prefilledGrade) : 1,
     duration_minutes: 60,
-    start_datetime: '',
-    end_datetime: '',
+    start_datetime: buildInitialDatetime(prefilledDate, 10),
+    end_datetime: buildInitialDatetime(prefilledDate, 12),
     is_active: true
   })
+
+  const hasPrefilled = !!(prefilledSubject || prefilledGrade || prefilledDate)
 
   // Returns current datetime in datetime-local format (YYYY-MM-DDTHH:mm)
   const getNow = () => {
@@ -45,7 +66,10 @@ export default function AddTest() {
       .then(res => res.json())
       .then(data => {
         setSubjects(data)
-        if (data.length > 0) setTestData(prev => ({ ...prev, subject: data[0].id }))
+        // Only auto-pick first subject if no prefilled subject from URL
+        if (data.length > 0) {
+          setTestData(prev => prev.subject ? prev : { ...prev, subject: data[0].id })
+        }
       })
       .catch(err => console.error(err))
 
@@ -149,20 +173,23 @@ export default function AddTest() {
       return
     }
 
-    // Basic validation
-    for (let q of questions) {
+    // Allow saving without questions; if some questions are partially filled, require all fields
+    const nonEmptyQuestions = questions.filter(q =>
+      q.question_text || q.option_a || q.option_b || q.option_c || q.option_d
+    )
+    for (let q of nonEmptyQuestions) {
       if (!q.question_text || !q.option_a || !q.option_b || !q.option_c || !q.option_d) {
-        alert(`${q.order_number}-savolda barcha maydonlarni to'ldiring!`)
+        alert(`${q.order_number}-savolda barcha maydonlarni to'ldiring yoki butunlay bo'sh qoldiring!`)
         return
       }
     }
 
     setSaving(true)
-    
-    // Clean up IDs for backend creation
-    const questionsToSave = questions.map(q => {
+
+    // Renumber and strip IDs (only send filled questions; can be empty array)
+    const questionsToSave = nonEmptyQuestions.map((q, idx) => {
       const { id, ...rest } = q
-      return rest
+      return { ...rest, order_number: idx + 1 }
     })
 
     // Auto-generate title: SubjectName + Grade + Date
@@ -213,7 +240,21 @@ export default function AddTest() {
         <button className="btn-back" onClick={() => navigate('/tests')}>← Orqaga</button>
         <div className="title-section">
           <h1>Yangi test yaratish</h1>
-          <p>Test sozlamalari va savollarni kiriting</p>
+          {hasPrefilled ? (
+            <p className="prefilled-hint">
+              <span className="prefill-chip">
+                {subjects.find(s => s.id === testData.subject)?.name || 'Fan'}
+              </span>
+              <span className="prefill-chip">{testData.grade}-sinf</span>
+              {prefilledDate && (
+                <span className="prefill-chip prefill-date">
+                  📅 {formatPrefillDate(prefilledDate)}
+                </span>
+              )}
+            </p>
+          ) : (
+            <p>Test sozlamalari va savollarni kiriting</p>
+          )}
         </div>
         <button className="btn-save" onClick={handleSave} disabled={saving}>
           {saving ? 'Saqlanmoqda...' : '💾 Testni saqlash'}
@@ -259,24 +300,26 @@ export default function AddTest() {
           </div>
 
           <div className="form-group datetime-section">
-            <label>📅 Boshlanish vaqti</label>
-            <input 
-              type="datetime-local" 
-              name="start_datetime" 
-              value={testData.start_datetime} 
+            <label>📅 Boshlanish vaqti (soniyagacha)</label>
+            <input
+              type="datetime-local"
+              name="start_datetime"
+              value={testData.start_datetime}
               min={getNow()}
-              onChange={handleTestChange} 
+              step="1"
+              onChange={handleTestChange}
             />
           </div>
 
           <div className="form-group">
-            <label>🏁 Tugash vaqti</label>
-            <input 
-              type="datetime-local" 
-              name="end_datetime" 
-              value={testData.end_datetime} 
+            <label>🏁 Tugash vaqti (soniyagacha)</label>
+            <input
+              type="datetime-local"
+              name="end_datetime"
+              value={testData.end_datetime}
               min={testData.start_datetime || getNow()}
-              onChange={handleTestChange} 
+              step="1"
+              onChange={handleTestChange}
               disabled={!testData.start_datetime}
             />
           </div>

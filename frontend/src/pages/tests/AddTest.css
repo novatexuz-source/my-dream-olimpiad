@@ -33,6 +33,34 @@
 .title-section h1 { margin: 0 0 4px 0; font-size: 1.5rem; color: #111827; font-weight: 800; letter-spacing: -0.02em; }
 .title-section p { margin: 0; font-size: 0.85rem; color: #6b7280; font-weight: 500; }
 
+.prefilled-hint {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  margin: 0 !important;
+}
+
+.prefill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #eef2ff, #ede9fe);
+  color: #4f46e5;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.prefill-chip.prefill-date {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+  border-color: rgba(217, 119, 6, 0.3);
+}
+
 .btn-save {
   background: #10b981;
   color: white;

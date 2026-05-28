@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import './Register.css'
+import { API_BASE } from '../../config'
 
 // Telegram WebApp SDK
 const tg = window.Telegram?.WebApp
@@ -72,7 +73,7 @@ export default function Register() {
       const id = urlParams.get('id');
 
       if (id) {
-        fetch(`http://localhost:8000/api/registration/get_by_id/?id=${id}`)
+        fetch(`${API_BASE}/registration/get_by_id/?id=${id}`)
           .then(res => {
             if (res.ok) return res.json()
             throw new Error('Not found')
@@ -143,7 +144,7 @@ export default function Register() {
         ? `tg_${tg.initDataUnsafe.user.id}`
         : null
 
-      const res = await fetch('http://localhost:8000/api/registration/register/', {
+      const res = await fetch(`${API_BASE}/registration/register/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

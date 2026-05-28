@@ -75,37 +75,79 @@
   flex-wrap: wrap;
 }
 
+/* === Unified Beautiful Search === */
 .search-wrap {
   flex: 1;
-  min-width: 220px;
+  min-width: 280px;
   position: relative;
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 14px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.search-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 14px;
+  padding: 1.5px;
+  background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.search-wrap:focus-within::before { opacity: 1; }
+
+.search-wrap:focus-within {
+  border-color: transparent;
+  box-shadow:
+    0 0 0 4px rgba(99, 102, 241, 0.12),
+    0 10px 24px -8px rgba(99, 102, 241, 0.2);
+  transform: translateY(-1px);
 }
 
 .search-ico {
   position: absolute;
-  left: 12px;
+  left: 16px;
   top: 50%;
   transform: translateY(-50%);
-  color: #9ca3af;
+  color: #94a3b8;
+  transition: color 0.25s ease, transform 0.25s ease;
+  z-index: 1;
+}
+
+.search-wrap:focus-within .search-ico {
+  color: #6366f1;
+  transform: translateY(-50%) scale(1.1);
 }
 
 .search-wrap input {
   width: 100%;
-  padding: 10px 14px 10px 38px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  background: white;
-  color: #111827;
+  padding: 13px 16px 13px 46px;
+  border: none;
+  border-radius: 14px;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 500;
+  background: transparent;
+  color: #0f172a;
   outline: none;
   box-sizing: border-box;
-  transition: border-color 0.2s;
+  letter-spacing: 0.01em;
 }
 
-.search-wrap input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+.search-wrap input::placeholder {
+  color: #94a3b8;
+  font-weight: 500;
 }
+
+.search-wrap input:focus { outline: none; }
 
 .results-filters select {
   padding: 10px 14px;

@@ -1,21 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { 
-  Search, 
-  Copy, 
-  Check, 
-  Eye, 
-  RefreshCw, 
-  X, 
-  AlertTriangle, 
-  User, 
-  Calendar, 
-  CreditCard, 
-  Tag, 
-  BookOpen, 
-  GraduationCap, 
-  FileText, 
-  ArrowUpDown, 
-  Filter 
+import {
+  Search,
+  Copy,
+  Check,
+  Eye,
+  RefreshCw,
+  X,
+  AlertTriangle,
+  User,
+  Calendar,
+  CreditCard,
+  Tag,
+  BookOpen,
+  GraduationCap,
+  FileText,
+  ArrowUpDown,
+  Filter,
+  Users,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  TrendingUp
 } from 'lucide-react'
 import { API_BASE } from '../../config'
 import './Leads.css'
@@ -36,6 +41,23 @@ const PRESET_REASONS = [
   "To'lov summasi noto'g'ri yoki yetarli emas"
 ]
 
+const AVATAR_GRADIENTS = [
+  'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+  'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
+  'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)',
+  'linear-gradient(135deg, #14b8a6 0%, #0ea5e9 100%)',
+  'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+  'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
+  'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+  'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)',
+]
+
+const getAvatarGradient = (name) => {
+  if (!name) return AVATAR_GRADIENTS[0]
+  const code = name.charCodeAt(0) || 0
+  return AVATAR_GRADIENTS[code % AVATAR_GRADIENTS.length]
+}
+
 export default function Leads({ defaultStatus = 'all' }) {
   const [participants, setParticipants] = useState([])
   const [loading, setLoading] = useState(true)
@@ -47,16 +69,13 @@ export default function Leads({ defaultStatus = 'all' }) {
   const [sortBy, setSortBy] = useState('newest')
   const [selected, setSelected] = useState(null)
   const [stats, setStats] = useState({ total: 0, approved: 0, pending: 0, rejected: 0 })
-  
-  // Rejection Dialog state
+
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [rejectingId, setRejectingId] = useState(null)
   const [rejectReason, setRejectReason] = useState('')
-  
-  // Copy state
+
   const [copiedId, setCopiedId] = useState(null)
-  
-  // Fullscreen document zoom
+
   const [zoomImage, setZoomImage] = useState(null)
 
   const fetchData = useCallback(async () => {
@@ -79,8 +98,8 @@ export default function Leads({ defaultStatus = 'all' }) {
     }
   }, [])
 
-  useEffect(() => { 
-    fetchData() 
+  useEffect(() => {
+    fetchData()
   }, [fetchData])
 
   useEffect(() => {
@@ -114,8 +133,8 @@ export default function Leads({ defaultStatus = 'all' }) {
         await fetchData()
         setSelected(null)
       }
-    } catch (e) { 
-      console.error(e) 
+    } catch (e) {
+      console.error(e)
     } finally {
       setActionLoading(false)
     }
@@ -132,7 +151,7 @@ export default function Leads({ defaultStatus = 'all' }) {
     if (!rejectReason.trim()) return
     setActionLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/registration/participants/${rejectingId}/reject/`, { 
+      const res = await fetch(`${API_BASE}/registration/participants/${rejectingId}/reject/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: rejectReason })
@@ -144,8 +163,8 @@ export default function Leads({ defaultStatus = 'all' }) {
         setRejectReason('')
         setSelected(null)
       }
-    } catch (e) { 
-      console.error(e) 
+    } catch (e) {
+      console.error(e)
     } finally {
       setActionLoading(false)
     }
@@ -160,12 +179,12 @@ export default function Leads({ defaultStatus = 'all' }) {
 
   const formatDate = (d) => {
     if (!d) return '—'
-    return new Date(d).toLocaleDateString('uz-UZ', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return new Date(d).toLocaleDateString('uz-UZ', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     })
   }
 
@@ -179,25 +198,31 @@ export default function Leads({ defaultStatus = 'all' }) {
 
   const hasActiveFilters = search || filterSubject !== 'all' || filterGrade !== 'all' || filterStatus !== defaultStatus
 
+  const pageTitle = defaultStatus === 'rejected' ? 'Rad etilgan arizalar' :
+                    defaultStatus === 'approved' ? 'Tasdiqlangan arizalar' :
+                    defaultStatus === 'pending' ? 'Kutilayotgan arizalar' :
+                    "Arizalar ro'yxati"
+
+  const pageSubtitle = "Olimpiada ishtirokchilarini boshqarish va verification paneli"
+
   return (
     <div className="leads-page">
-      {/* Header */}
-      <div className="leads-header">
+      {/* Hero Header Card */}
+      <div className="leads-hero">
+        <div className="hero-bg-decor" />
+        <div className="hero-bg-decor hero-bg-decor-2" />
+
         <div className="leads-title-row">
           <div className="leads-title">
             <span className="leads-icon">
-              {defaultStatus === 'rejected' ? '❌' : 
-               defaultStatus === 'approved' ? '✅' : 
-               defaultStatus === 'pending' ? '⏳' : '📋'}
+              {defaultStatus === 'rejected' ? <XCircle size={28} strokeWidth={2.2} /> :
+               defaultStatus === 'approved' ? <CheckCircle2 size={28} strokeWidth={2.2} /> :
+               defaultStatus === 'pending' ? <Clock size={28} strokeWidth={2.2} /> :
+               <Users size={28} strokeWidth={2.2} />}
             </span>
             <div>
-              <h1>
-                {defaultStatus === 'rejected' ? 'Rad etilgan arizalar' : 
-                 defaultStatus === 'approved' ? 'Tasdiqlangan arizalar' : 
-                 defaultStatus === 'pending' ? 'Kutilayotgan arizalar' : 
-                 "Arizalar ro'yxati"}
-              </h1>
-              <p>Olimpiada ishtirokchilarini boshqarish va verification paneli</p>
+              <h1>{pageTitle}</h1>
+              <p>{pageSubtitle}</p>
             </div>
           </div>
           <button className={`refresh-btn ${loading ? 'spinning' : ''}`} onClick={fetchData} disabled={loading}>
@@ -206,8 +231,10 @@ export default function Leads({ defaultStatus = 'all' }) {
           </button>
         </div>
 
+      </div>
 
-        {/* Filters */}
+      {/* Toolbar: Filters */}
+      <div className="leads-toolbar">
         <div className="filters-row">
           <div className="search-box">
             <Search size={18} className="search-icon" />
@@ -246,14 +273,16 @@ export default function Leads({ defaultStatus = 'all' }) {
 
           {hasActiveFilters && (
             <button className="reset-btn" onClick={resetFilters}>
-              Filterlarni tozalash
+              <X size={14} />
+              Tozalash
             </button>
           )}
         </div>
 
         <div className="results-count-row">
           <div className="results-count">
-            {loading ? 'Yuklanmoqda...' : `${filtered.length} ta ariza topildi`}
+            <TrendingUp size={14} />
+            {loading ? 'Yuklanmoqda...' : <span><strong>{filtered.length}</strong> ta ariza topildi</span>}
           </div>
         </div>
       </div>
@@ -302,7 +331,10 @@ export default function Leads({ defaultStatus = 'all' }) {
                   <tr key={p.id} className="table-row" onClick={() => setSelected(p)}>
                     <td className="td-num">{i + 1}</td>
                     <td className="td-name">
-                      <div className="name-avatar-gradient">
+                      <div
+                        className="name-avatar-gradient"
+                        style={{ background: getAvatarGradient(p.full_name) }}
+                      >
                         {p.full_name?.[0]?.toUpperCase() || '?'}
                       </div>
                       <span className="fullname-text">{p.full_name}</span>
@@ -338,16 +370,16 @@ export default function Leads({ defaultStatus = 'all' }) {
                     <td className="td-actions" onClick={e => e.stopPropagation()}>
                       {p.verification_status === 'pending' && (
                         <div className="action-buttons">
-                          <button 
-                            className="btn-approve" 
+                          <button
+                            className="btn-approve"
                             onClick={() => handleApprove(p.id)}
                             disabled={actionLoading}
                             title="Arizani tasdiqlash"
                           >
                             Tasdiqlash
                           </button>
-                          <button 
-                            className="btn-reject" 
+                          <button
+                            className="btn-reject"
                             onClick={(e) => handleRejectClick(p.id, e)}
                             disabled={actionLoading}
                             title="Arizani rad etish"
@@ -384,9 +416,14 @@ export default function Leads({ defaultStatus = 'all' }) {
         <div className="modal-overlay animate-fade-in" onClick={() => setSelected(null)}>
           <div className="modal-card animate-slide-up" onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setSelected(null)}><X size={20} /></button>
-            
+
             <div className="modal-header-section">
-              <div className="modal-avatar-gradient">{selected.full_name?.[0]?.toUpperCase()}</div>
+              <div
+                className="modal-avatar-gradient"
+                style={{ background: getAvatarGradient(selected.full_name) }}
+              >
+                {selected.full_name?.[0]?.toUpperCase()}
+              </div>
               <h2>{selected.full_name}</h2>
               <div className={`status-pill ${STATUS_MAP[selected.verification_status]?.color} modal-status-badge`}>
                 <span className="status-dot" />
@@ -395,7 +432,6 @@ export default function Leads({ defaultStatus = 'all' }) {
             </div>
 
             <div className="modal-split-layout">
-              {/* Info Details */}
               <div className="modal-info-column">
                 <h3 className="section-title">Ishtirokchi ma'lumotlari</h3>
                 <div className="modal-details">
@@ -448,15 +484,14 @@ export default function Leads({ defaultStatus = 'all' }) {
                 </div>
               </div>
 
-              {/* Document Image Preview Column */}
               <div className="modal-doc-column">
                 <h3 className="section-title">Hujjat (Pasport / Guvohnoma)</h3>
                 {selected.passport_or_birth_cert ? (
                   <div className="doc-preview-container" onClick={() => setZoomImage(selected.passport_or_birth_cert)}>
-                    <img 
-                      src={selected.passport_or_birth_cert} 
-                      alt="Passport yoki guvohnoma" 
-                      className="doc-thumbnail" 
+                    <img
+                      src={selected.passport_or_birth_cert}
+                      alt="Passport yoki guvohnoma"
+                      className="doc-thumbnail"
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.style.display = 'none';
@@ -479,15 +514,15 @@ export default function Leads({ defaultStatus = 'all' }) {
 
             {selected.verification_status === 'pending' && (
               <div className="modal-actions-grid">
-                <button 
-                  className="btn-approve-big" 
+                <button
+                  className="btn-approve-big"
                   onClick={() => handleApprove(selected.id)}
                   disabled={actionLoading}
                 >
                   {actionLoading ? 'Tasdiqlanmoqda...' : "✅ Arizani tasdiqlash"}
                 </button>
-                <button 
-                  className="btn-reject-big" 
+                <button
+                  className="btn-reject-big"
                   onClick={() => handleRejectClick(selected.id)}
                   disabled={actionLoading}
                 >
@@ -507,14 +542,14 @@ export default function Leads({ defaultStatus = 'all' }) {
               <AlertTriangle size={24} className="warn-icon" />
               <h3>Arizani rad etish sababi</h3>
             </div>
-            
+
             <p className="rejection-dialog-intro">Iltimos, arizani rad etish sababini tanlang yoki o'zingiz yozing:</p>
-            
+
             <div className="preset-reasons-list">
               {PRESET_REASONS.map(reason => (
-                <button 
+                <button
                   key={reason}
-                  type="button" 
+                  type="button"
                   className={`preset-reason-btn ${rejectReason === reason ? 'selected' : ''}`}
                   onClick={() => setRejectReason(reason)}
                 >
@@ -532,15 +567,15 @@ export default function Leads({ defaultStatus = 'all' }) {
             />
 
             <div className="rejection-dialog-actions">
-              <button 
-                className="btn-dialog-cancel" 
+              <button
+                className="btn-dialog-cancel"
                 onClick={() => setShowRejectDialog(false)}
                 disabled={actionLoading}
               >
                 Bekor qilish
               </button>
-              <button 
-                className="btn-dialog-confirm" 
+              <button
+                className="btn-dialog-confirm"
                 onClick={handleRejectConfirm}
                 disabled={actionLoading || !rejectReason.trim()}
               >

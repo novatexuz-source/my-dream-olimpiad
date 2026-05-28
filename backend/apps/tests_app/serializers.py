@@ -1,5 +1,25 @@
+from datetime import date as date_cls
+from django.db.models import Q
 from rest_framework import serializers
 from .models import Subject, Test, Question
+
+
+def sync_approved_participants_to_upcoming_date(target_date):
+    """Move all approved participants whose target_test_date is NULL or
+    points to a date with no tests, onto `target_date`.
+    """
+    from apps.registration.models import Participant
+    valid_dates = set(
+        Test.objects
+        .exclude(start_datetime__isnull=True)
+        .values_list('start_datetime__date', flat=True)
+    )
+    orphans = Participant.objects.filter(
+        verification_status='approved'
+    ).filter(
+        Q(target_test_date__isnull=True) | ~Q(target_test_date__in=valid_dates)
+    )
+    return orphans.update(target_test_date=target_date)
 
 class SubjectSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,23 +45,40 @@ class TestSerializer(serializers.ModelSerializer):
         start_datetime = data.get('start_datetime')
 
         if subject and grade and start_datetime:
-            # Check if a test for same subject+grade already exists on the same date
             test_date = start_datetime.date()
+            instance = self.instance
+
             existing = Test.objects.filter(
                 subject=subject,
                 grade=grade,
                 start_datetime__date=test_date
             )
-            # Exclude current instance if updating
-            instance = self.instance
             if instance:
                 existing = existing.exclude(pk=instance.pk)
-            
+
             if existing.exists():
                 raise serializers.ValidationError(
                     f"Bu fandan {grade}-sinf uchun {test_date.strftime('%d.%m.%Y')} kuni allaqachon test mavjud!"
                 )
-        
+
+            # Only ONE future olympiad date allowed across all tests.
+            today = date_cls.today()
+            if test_date >= today:
+                other_future_dates = Test.objects.filter(
+                    start_datetime__date__gte=today
+                ).exclude(
+                    start_datetime__date=test_date
+                )
+                if instance:
+                    other_future_dates = other_future_dates.exclude(pk=instance.pk)
+                if other_future_dates.exists():
+                    existing_date = other_future_dates.first().start_datetime.date()
+                    raise serializers.ValidationError(
+                        f"Faqat bitta kelajakdagi olimpiada sanasi mumkin. "
+                        f"Hozir {existing_date.strftime('%d.%m.%Y')} sanasiga rejalashtirilgan. "
+                        f"Yangi sana qo'shish uchun avval uni o'chiring."
+                    )
+
         return data
 
     def create(self, validated_data):
@@ -49,6 +86,13 @@ class TestSerializer(serializers.ModelSerializer):
         test = Test.objects.create(**validated_data)
         for question_data in questions_data:
             Question.objects.create(test=test, **question_data)
+
+        # If this is a future olympiad date, sync ALL orphaned approved
+        # participants (NULL target OR pointing to a no-longer-existing date)
+        # to this upcoming date.
+        if test.start_datetime and test.start_datetime.date() >= date_cls.today():
+            sync_approved_participants_to_upcoming_date(test.start_datetime.date())
+
         return test
 
     def update(self, instance, validated_data):

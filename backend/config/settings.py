@@ -21,11 +21,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-8873l1e395#n^k1z3&+(4--esx69*yr9ha=c!9e5vz_c1435@v')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
+
+# SECURITY WARNING: keep the secret key used in production secret!
+if DEBUG:
+    SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-only-do-not-use-in-production')
+else:
+    SECRET_KEY = os.environ['SECRET_KEY']
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,.trycloudflare.com,.onrender.com').split(',')
 
@@ -159,7 +162,16 @@ REST_FRAMEWORK = {
 }
 
 # CORS Config
-CORS_ALLOW_ALL_ORIGINS = True # Change to False in production and specify domains
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip() for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if origin.strip()
+    ]
+    CSRF_TRUSTED_ORIGINS = [
+        origin.strip() for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if origin.strip()
+    ]
 
 from datetime import timedelta
 SIMPLE_JWT = {

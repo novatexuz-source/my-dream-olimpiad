@@ -37,6 +37,7 @@ class Participant(models.Model):
     unique_code = models.CharField(max_length=6, unique=True, null=True, blank=True)
     passport_or_birth_cert = models.URLField(null=True, blank=True, help_text="Supabase Image URL")
     rejection_reason = models.TextField(null=True, blank=True)
+    target_test_date = models.DateField(null=True, blank=True, help_text="Qaysi olimpiada kunida qatnashadi")
     registered_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
