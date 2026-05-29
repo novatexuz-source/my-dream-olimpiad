@@ -1,0 +1,13 @@
+app = "my-dream-olimpiad-bot"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "Dockerfile.bot"
+
+[processes]
+  bot = "python -m apps.tg_bot.bot.main"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+  cpus = 1
