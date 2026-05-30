@@ -234,7 +234,7 @@ export default function TakeExam() {
                 )}
 
                 <div className="options-interactive-list">
-                  {['A', 'B', 'C', 'D'].map(letter => {
+                  {['A', 'B', 'C', 'D'].filter(letter => ((currentQuestion[`option_${letter.toLowerCase()}`] || '').trim() !== '')).map(letter => {
                     const optionKey = `option_${letter.toLowerCase()}`
                     const isSelected = answers[currentQuestion.id] === letter
 
