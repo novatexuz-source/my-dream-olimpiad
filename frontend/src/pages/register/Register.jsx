@@ -19,7 +19,7 @@ export default function Register() {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  
+
   const getPrice = () => {
     const num = Math.max(1, form.subjects.length)
     return 190000 + (num - 1) * 90000
@@ -65,9 +65,9 @@ export default function Register() {
     if (tg) {
       tg.ready()
       tg.expand()
-      tg.setHeaderColor('#0f0c29')
-      tg.setBackgroundColor('#0f0c29')
-      
+      tg.setHeaderColor('#0b0a1f')
+      tg.setBackgroundColor('#0b0a1f')
+
       const urlParams = new URLSearchParams(window.location.search);
       const action = urlParams.get('action');
       const id = urlParams.get('id');
@@ -224,7 +224,8 @@ export default function Register() {
         {/* Step 1: Personal */}
         {step === 1 && (
           <div className="step-content">
-            <h2 className="step-title">👤 Shaxsiy ma'lumotlar</h2>
+            <h2 className="step-title">Shaxsiy ma'lumotlar</h2>
+            <p className="step-subtitle">Ism va familiyangizni sertifikatdagidek to'g'ri kiriting.</p>
             <div className="form-row">
               <div className="form-group">
                 <label>Ismingiz</label>
@@ -269,7 +270,8 @@ export default function Register() {
         {/* Step 2: Education */}
         {step === 2 && (
           <div className="step-content">
-            <h2 className="step-title">🏫 Ta'lim ma'lumotlari</h2>
+            <h2 className="step-title">Ta'lim ma'lumotlari</h2>
+            <p className="step-subtitle">Sinfingizni va qatnashmoqchi bo'lgan fanlaringizni tanlang.</p>
             <div className="form-group">
               <label>Sinfingiz</label>
               <div className="grade-grid">
@@ -323,7 +325,8 @@ export default function Register() {
         {/* Step 3: Payment */}
         {step === 3 && (
           <div className="step-content">
-            <h2 className="step-title">💳 To'lov turi</h2>
+            <h2 className="step-title">To'lov turi</h2>
+            <p className="step-subtitle">Qulay to'lov usulini tanlang. To'lov tasdiqlangach faollashtiriladi.</p>
             <div className="price-badge">{getPrice().toLocaleString('ru-RU')} so'm</div>
             <div className="payment-list">
               {PAYMENT_TYPES.map(p => (
@@ -345,7 +348,8 @@ export default function Register() {
         {/* Step 4: Confirm */}
         {step === 4 && (
           <div className="step-content">
-            <h2 className="step-title">✅ Ma'lumotlarni tasdiqlang</h2>
+            <h2 className="step-title">Ma'lumotlarni tasdiqlang</h2>
+            <p className="step-subtitle">Yuborishdan oldin barcha ma'lumotlar to'g'riligiga ishonch hosil qiling.</p>
             <div className="confirm-notice">
               ⚠️ Bu ma'lumotlar sertifikatda xuddi shunday tartibda chiqadi. Diqqat bilan tekshiring!
             </div>
