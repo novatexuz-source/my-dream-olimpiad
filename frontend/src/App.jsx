@@ -13,6 +13,7 @@ import ExamResult from './pages/exam/ExamResult'
 import Calls from './pages/calls/Calls'
 import Profile from './pages/profile/Profile'
 import Results from './pages/results/Results'
+import Monitor from './pages/monitor/Monitor'
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('access_token')
@@ -30,7 +31,8 @@ function App() {
         <Route path="/" element={<Register />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        
+        <Route path="/monitor" element={<Monitor />} />
+
         {/* Student Exam Routes */}
         <Route path="/exam/login" element={<ExamLogin />} />
         <Route path="/exam/take/:sessionId" element={<TakeExam />} />

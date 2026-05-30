@@ -1,7 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.db.models import Prefetch
 from apps.results.models import Result
+from apps.registration.models import Participant
 from apps.exams.models import ExamSession
 
 
@@ -48,4 +50,82 @@ class ResultsListView(APIView):
         return Response({
             'count': len(data),
             'results': data
+        })
+
+
+class AttendanceListView(APIView):
+    """Public monitor: which registered students entered the test and which did not.
+
+    Sensitive fields (unique_code, phone) are intentionally NOT exposed.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        participants = (
+            Participant.objects
+            .exclude(unique_code__isnull=True)
+            .exclude(unique_code='')
+            .prefetch_related(
+                Prefetch(
+                    'exam_sessions',
+                    queryset=ExamSession.objects.order_by('-started_at'),
+                )
+            )
+            .order_by('grade', 'full_name')
+        )
+
+        search = request.query_params.get('search', '').strip()
+        subject = request.query_params.get('subject', '').strip()
+        grade = request.query_params.get('grade', '').strip()
+        status_f = request.query_params.get('status', '').strip()
+
+        if search:
+            participants = participants.filter(full_name__icontains=search)
+        if subject:
+            participants = participants.filter(subject__iexact=subject)
+        if grade:
+            participants = participants.filter(grade=grade)
+
+        data = []
+        entered_count = 0
+        for p in participants:
+            sessions = list(p.exam_sessions.all())
+            completed = [s for s in sessions if s.status == 'completed']
+            in_progress = [s for s in sessions if s.status == 'in_progress']
+            entered = len(sessions) > 0
+            if entered:
+                entered_count += 1
+            if completed:
+                st, latest = 'completed', completed[0]
+            elif in_progress:
+                st, latest = 'in_progress', in_progress[0]
+            elif sessions:
+                st, latest = 'started', sessions[0]
+            else:
+                st, latest = 'not_entered', None
+            data.append({
+                'id': str(p.id),
+                'full_name': p.full_name,
+                'grade': p.grade,
+                'subject': p.subject,
+                'entered': entered,
+                'status': st,
+                'started_at': latest.started_at if latest else None,
+                'finished_at': latest.finished_at if latest else None,
+            })
+
+        total = len(data)
+        not_entered_count = total - entered_count
+
+        if status_f == 'entered':
+            data = [d for d in data if d['entered']]
+        elif status_f == 'not_entered':
+            data = [d for d in data if not d['entered']]
+
+        return Response({
+            'count': len(data),
+            'total': total,
+            'entered_count': entered_count,
+            'not_entered_count': not_entered_count,
+            'results': data,
         })
