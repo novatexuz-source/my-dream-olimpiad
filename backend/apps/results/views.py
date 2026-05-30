@@ -103,6 +103,7 @@ class AttendanceListView(APIView):
                 st, latest = 'started', sessions[0]
             else:
                 st, latest = 'not_entered', None
+            is_done = st == 'completed' and latest is not None
             data.append({
                 'id': str(p.id),
                 'full_name': p.full_name,
@@ -110,6 +111,8 @@ class AttendanceListView(APIView):
                 'subject': p.subject,
                 'entered': entered,
                 'status': st,
+                'percentage': round(latest.percentage, 1) if is_done else None,
+                'score': latest.score if is_done else None,
                 'started_at': latest.started_at if latest else None,
                 'finished_at': latest.finished_at if latest else None,
             })

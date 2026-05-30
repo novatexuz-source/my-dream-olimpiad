@@ -148,7 +148,12 @@ export default function Monitor() {
                       <td className="name">{r.full_name}</td>
                       <td>{r.grade}-sinf</td>
                       <td>{r.subject}</td>
-                      <td><span className={`badge ${b.cls}`}>{b.text}</span></td>
+                      <td>
+                        <span className={`badge ${b.cls}`}>{b.text}</span>
+                        {r.status === 'completed' && r.percentage != null && (
+                          <span className="pct">{r.percentage}%</span>
+                        )}
+                      </td>
                       <td className="time">
                         {r.status === 'completed' ? fmt(r.finished_at) : fmt(r.started_at)}
                       </td>
