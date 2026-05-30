@@ -11,6 +11,23 @@ from .serializers import ParticipantSerializer
 from decouple import config
 
 
+def _resolve_chat_id(telegram_id):
+    """Return a numeric Telegram chat_id usable by the Bot API, or None.
+
+    Stored telegram_id can be 'tg_12345' (web form), a raw '12345' (bot flow),
+    or 'web_998...' (web user with no Telegram chat). Only the first two can
+    receive messages.
+    """
+    if not telegram_id:
+        return None
+    tg_id = str(telegram_id)
+    if tg_id.startswith('tg_'):
+        return tg_id[3:]
+    if tg_id.isdigit():
+        return tg_id
+    return None
+
+
 def get_next_olympiad_date():
     """Return the next upcoming olympiad date (earliest future Test date) or None."""
     from apps.tests_app.models import Test
@@ -55,23 +72,24 @@ class ParticipantViewSet(viewsets.ModelViewSet):
         participant.payment_status = 'paid'
         participant.unique_code = code
         participant.save()
-        
-        # Send telegram message
-        BOT_TOKEN = config('BOT_TOKEN', default='')
-        text = f"🎉 Tabriklaymiz! Arizangiz tasdiqlandi.\n\nSizning unikal kodingiz: <b>{code}</b>\n\nIltimos bu kodni saqlab qo'ying, test kuni kerak bo'ladi."
-        
-        try:
-            requests.post(
-                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                data={
-                    "chat_id": participant.telegram_id,
-                    "text": text,
-                    "parse_mode": "HTML"
-                }
-            )
-        except Exception as e:
-            print("Failed to send TG message", e)
-            
+
+        # Send telegram message (strip the tg_ prefix so Telegram accepts the chat_id)
+        real_tg_id = _resolve_chat_id(participant.telegram_id)
+        if real_tg_id:
+            BOT_TOKEN = config('BOT_TOKEN', default='')
+            text = f"🎉 Tabriklaymiz! Arizangiz tasdiqlandi.\n\nSizning unikal kodingiz: <b>{code}</b>\n\nIltimos bu kodni saqlab qo'ying, test kuni kerak bo'ladi."
+            try:
+                requests.post(
+                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                    data={
+                        "chat_id": real_tg_id,
+                        "text": text,
+                        "parse_mode": "HTML"
+                    }
+                )
+            except Exception as e:
+                print("Failed to send TG message", e)
+
         return Response({'status': 'approved', 'code': code})
         
     @action(detail=True, methods=['post'])
@@ -83,22 +101,23 @@ class ParticipantViewSet(viewsets.ModelViewSet):
         participant.payment_status = 'rejected'
         participant.rejection_reason = reason
         participant.save()
-        
-        BOT_TOKEN = config('BOT_TOKEN', default='')
-        text = f"❌ Kechirasiz, arizangiz rad etildi.\nSabab: {reason}"
-        
-        try:
-            requests.post(
-                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                data={
-                    "chat_id": participant.telegram_id,
-                    "text": text,
-                    "parse_mode": "HTML"
-                }
-            )
-        except Exception:
-            pass
-            
+
+        real_tg_id = _resolve_chat_id(participant.telegram_id)
+        if real_tg_id:
+            BOT_TOKEN = config('BOT_TOKEN', default='')
+            text = f"❌ Kechirasiz, arizangiz rad etildi.\nSabab: {reason}"
+            try:
+                requests.post(
+                    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                    data={
+                        "chat_id": real_tg_id,
+                        "text": text,
+                        "parse_mode": "HTML"
+                    }
+                )
+            except Exception:
+                pass
+
         return Response({'status': 'rejected'})
 
     @action(detail=True, methods=['post'], url_path='call-status')
@@ -202,7 +221,7 @@ def public_register(request):
             f"<i>Ma'lumotlaringizda xato bo'lsa, quyidagi tugma orqali tahrirlashingiz mumkin.</i>"
         )
         
-        WEBAPP_URL = "https://sherman-contributions-treasurer-concerts.trycloudflare.com/register"
+        WEBAPP_URL = "https://my-dream-olimpiad-4vdk.vercel.app/register"
         import json, os
         reply_markup = {
             "inline_keyboard": [
