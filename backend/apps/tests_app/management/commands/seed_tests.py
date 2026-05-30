@@ -12,7 +12,7 @@ from django.core.management.base import BaseCommand
 from apps.tests_app.models import Subject, Test, Question
 
 SUBJECT_NAME = "Ingliz tili"
-DURATION_MINUTES = 40
+DURATION_MINUTES = 20
 PASSING_PERCENTAGE = 70.0
 
 # Each question: (question_text, option_a, option_b, option_c, correct_answer)
