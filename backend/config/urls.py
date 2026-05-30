@@ -30,4 +30,5 @@ urlpatterns = [
     path('api/exams/', include('apps.exams.urls')),
     path('api/users/', include('apps.users.urls')),
     path('api/results/', include('apps.results.urls')),
+    path('api/tg/', include('apps.tg_bot.urls')),
 ]
