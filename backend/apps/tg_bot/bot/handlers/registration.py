@@ -10,7 +10,7 @@ from asgiref.sync import sync_to_async
 router = Router()
 
 # URL of your registration form (HTTPS via Cloudflare Tunnel)
-WEBAPP_URL = "https://sherman-contributions-treasurer-concerts.trycloudflare.com/register"
+WEBAPP_URL = "https://my-dream-olimpiad.vercel.app/register"
 
 async def show_confirmation(message: Message, state: FSMContext):
     data = await state.get_data()
