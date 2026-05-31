@@ -35,7 +35,7 @@ class ResultsListView(APIView):
                 'id': str(session.id),
                 'rank': idx,
                 'full_name': session.participant.full_name,
-                'phone': session.participant.phone_number,
+                'phone': session.participant.phone,
                 'grade': session.test.grade,
                 'subject': session.test.subject.name,
                 'test_title': session.test.title,
