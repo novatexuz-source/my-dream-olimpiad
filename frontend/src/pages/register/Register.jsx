@@ -65,8 +65,8 @@ export default function Register() {
     if (tg) {
       tg.ready()
       tg.expand()
-      tg.setHeaderColor('#0b0a1f')
-      tg.setBackgroundColor('#0b0a1f')
+      tg.setHeaderColor('#ffffff')
+      tg.setBackgroundColor('#ffffff')
 
       const urlParams = new URLSearchParams(window.location.search);
       const action = urlParams.get('action');
