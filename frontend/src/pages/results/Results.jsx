@@ -55,7 +55,27 @@ export default function Results() {
     }
   }
 
+  const toggleCertificate = async (id) => {
+    const token = localStorage.getItem('access_token')
+    // Optimistic: flip immediately so the row sinks to the bottom
+    setResults(prev => prev.map(r => r.id === id ? { ...r, certificate_sent: !r.certificate_sent } : r))
+    try {
+      const res = await fetch(`${API_BASE}/results/${id}/certificate/`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!res.ok) throw new Error('toggle failed')
+      const data = await res.json()
+      setResults(prev => prev.map(r => r.id === id ? { ...r, certificate_sent: data.certificate_sent } : r))
+    } catch {
+      // Revert on failure
+      setResults(prev => prev.map(r => r.id === id ? { ...r, certificate_sent: !r.certificate_sent } : r))
+    }
+  }
+
   const sorted = [...results].sort((a, b) => {
+    // Issued-certificate rows always sink to the bottom
+    if (!!a.certificate_sent !== !!b.certificate_sent) return a.certificate_sent ? 1 : -1
     let valA = a[sortKey]
     let valB = b[sortKey]
     if (typeof valA === 'string') valA = valA.toLowerCase()
@@ -174,11 +194,18 @@ export default function Results() {
                   Ball <SortIcon col="score" />
                 </th>
                 <th>Sana</th>
+                <th>Sertifikat</th>
               </tr>
             </thead>
             <tbody>
               {sorted.map((r) => (
-                <tr key={r.id} className={r.rank <= 3 ? `top-row rank-${r.rank}` : ''}>
+                <tr
+                  key={r.id}
+                  className={[
+                    r.rank <= 3 ? `top-row rank-${r.rank}` : '',
+                    r.certificate_sent ? 'cert-done' : ''
+                  ].join(' ').trim()}
+                >
                   <td>
                     {getMedalClass(r.rank)
                       ? <span className={getMedalClass(r.rank)}>{r.rank}</span>
@@ -221,6 +248,15 @@ export default function Results() {
                           hour: '2-digit', minute: '2-digit'
                         })
                       : '—'}
+                  </td>
+                  <td>
+                    <button
+                      className={`cert-btn ${r.certificate_sent ? 'issued' : ''}`}
+                      onClick={() => toggleCertificate(r.id)}
+                      title={r.certificate_sent ? 'Bekor qilish uchun bosing' : 'Sertifikat berilganini belgilang'}
+                    >
+                      {r.certificate_sent ? '✓ Berildi' : 'Sertifikat berildi'}
+                    </button>
                   </td>
                 </tr>
               ))}

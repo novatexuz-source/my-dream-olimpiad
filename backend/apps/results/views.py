@@ -29,6 +29,11 @@ class ResultsListView(APIView):
         if grade:
             sessions = sessions.filter(test__grade=grade)
 
+        cert_map = dict(
+            Result.objects.filter(session__in=sessions)
+            .values_list('session_id', 'certificate_sent')
+        )
+
         data = []
         for idx, session in enumerate(sessions, start=1):
             data.append({
@@ -45,6 +50,7 @@ class ResultsListView(APIView):
                 'percentage': round(session.percentage, 1),
                 'score': session.score,
                 'finished_at': session.finished_at,
+                'certificate_sent': cert_map.get(session.id, False),
             })
 
         return Response({
@@ -131,4 +137,31 @@ class AttendanceListView(APIView):
             'entered_count': entered_count,
             'not_entered_count': not_entered_count,
             'results': data,
+        })
+
+
+class CertificateToggleView(APIView):
+    """Toggle whether a participant's certificate has been issued."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, session_id):
+        try:
+            session = ExamSession.objects.select_related('participant').get(
+                id=session_id, status='completed'
+            )
+        except ExamSession.DoesNotExist:
+            return Response({'error': 'Sessiya topilmadi'}, status=404)
+
+        result, _ = Result.objects.get_or_create(
+            session=session,
+            defaults={
+                'participant': session.participant,
+                'percentage': session.percentage,
+            },
+        )
+        result.certificate_sent = not result.certificate_sent
+        result.save(update_fields=['certificate_sent'])
+        return Response({
+            'success': True,
+            'certificate_sent': result.certificate_sent,
         })

@@ -409,3 +409,46 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ── Certificate action ── */
+.cert-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+}
+
+.cert-btn:hover {
+  border-color: #10b981;
+  color: #059669;
+  background: #f0fdf4;
+}
+
+.cert-btn.issued {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+.cert-btn.issued:hover {
+  background: #059669;
+  border-color: #059669;
+}
+
+/* Dimmed row once the certificate is issued (sinks to the bottom) */
+.results-table tbody tr.cert-done {
+  opacity: 0.5;
+  background: #f9fafb;
+}
+
+.results-table tbody tr.cert-done:hover {
+  opacity: 0.75;
+}
+
+.results-table tbody tr.cert-done.top-row { background: #f3f4f6; }
