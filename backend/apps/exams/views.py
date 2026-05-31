@@ -188,10 +188,23 @@ def start_exam(request):
             elapsed = (now - session.started_at).total_seconds()
             limit = test.duration_minutes * 60
             if elapsed >= limit:
-                # Close the session
-                session.status = 'completed'
-                session.finished_at = session.started_at + datetime.timedelta(minutes=test.duration_minutes)
-                session.save()
+                # Close the session and score it from saved answers
+                with transaction.atomic():
+                    session.status = 'completed'
+                    session.finished_at = session.started_at + datetime.timedelta(minutes=test.duration_minutes)
+                    answers = ExamAnswer.objects.filter(session=session)
+                    correct = answers.filter(is_correct=True).count()
+                    total = test.questions.count()
+                    session.correct_count = correct
+                    session.wrong_count = total - correct
+                    session.total_questions = total
+                    session.percentage = (correct / total * 100) if total > 0 else 0
+                    session.score = correct * 10
+                    session.save()
+                    Result.objects.get_or_create(
+                        session=session,
+                        defaults={'participant': participant, 'percentage': session.percentage}
+                    )
                 return Response({'error': "Sizning test topshirish vaqtingiz tugagan!"}, status=status.HTTP_400_BAD_REQUEST)
             
             serializer = ExamSessionSerializer(session)
@@ -240,9 +253,22 @@ def submit_answer(request):
     elapsed = (now - session.started_at).total_seconds()
     limit = session.test.duration_minutes * 60
     if elapsed >= limit:
-        session.status = 'completed'
-        session.finished_at = session.started_at + datetime.timedelta(minutes=session.test.duration_minutes)
-        session.save()
+        with transaction.atomic():
+            session.status = 'completed'
+            session.finished_at = session.started_at + datetime.timedelta(minutes=session.test.duration_minutes)
+            answers = ExamAnswer.objects.filter(session=session)
+            correct = answers.filter(is_correct=True).count()
+            total = session.test.questions.count()
+            session.correct_count = correct
+            session.wrong_count = total - correct
+            session.total_questions = total
+            session.percentage = (correct / total * 100) if total > 0 else 0
+            session.score = correct * 10
+            session.save()
+            Result.objects.get_or_create(
+                session=session,
+                defaults={'participant': session.participant, 'percentage': session.percentage}
+            )
         return Response({'error': "Test vaqti tugadi!"}, status=status.HTTP_400_BAD_REQUEST)
 
     is_correct = (question.correct_answer == selected_answer)
