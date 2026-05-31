@@ -434,11 +434,11 @@
   background: #10b981;
   border-color: #10b981;
   color: #ffffff;
+  cursor: default;
 }
 
-.cert-btn.issued:hover {
-  background: #059669;
-  border-color: #059669;
+.cert-btn:disabled {
+  cursor: default;
 }
 
 /* Dimmed row once the certificate is issued (sinks to the bottom) */

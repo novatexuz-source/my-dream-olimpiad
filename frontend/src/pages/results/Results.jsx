@@ -55,21 +55,22 @@ export default function Results() {
     }
   }
 
-  const toggleCertificate = async (id) => {
+  const markCertificate = async (id) => {
+    if (!window.confirm("Sertifikat berildi deb belgilaysizmi? Buni keyin bekor qilib bo'lmaydi.")) return
     const token = localStorage.getItem('access_token')
-    // Optimistic: flip immediately so the row sinks to the bottom
-    setResults(prev => prev.map(r => r.id === id ? { ...r, certificate_sent: !r.certificate_sent } : r))
+    // Optimistic: mark issued so the row sinks to the bottom
+    setResults(prev => prev.map(r => r.id === id ? { ...r, certificate_sent: true } : r))
     try {
       const res = await fetch(`${API_BASE}/results/${id}/certificate/`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       })
-      if (!res.ok) throw new Error('toggle failed')
+      if (!res.ok) throw new Error('mark failed')
       const data = await res.json()
       setResults(prev => prev.map(r => r.id === id ? { ...r, certificate_sent: data.certificate_sent } : r))
     } catch {
       // Revert on failure
-      setResults(prev => prev.map(r => r.id === id ? { ...r, certificate_sent: !r.certificate_sent } : r))
+      setResults(prev => prev.map(r => r.id === id ? { ...r, certificate_sent: false } : r))
     }
   }
 
@@ -252,8 +253,9 @@ export default function Results() {
                   <td>
                     <button
                       className={`cert-btn ${r.certificate_sent ? 'issued' : ''}`}
-                      onClick={() => toggleCertificate(r.id)}
-                      title={r.certificate_sent ? 'Bekor qilish uchun bosing' : 'Sertifikat berilganini belgilang'}
+                      onClick={() => markCertificate(r.id)}
+                      disabled={r.certificate_sent}
+                      title={r.certificate_sent ? 'Sertifikat berilgan' : 'Sertifikat berilganini belgilang'}
                     >
                       {r.certificate_sent ? '✓ Berildi' : 'Sertifikat berildi'}
                     </button>
