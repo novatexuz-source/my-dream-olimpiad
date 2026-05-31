@@ -15,7 +15,7 @@ class ResultsListView(APIView):
             status='completed'
         ).select_related(
             'participant', 'test', 'test__subject'
-        ).order_by('-finished_at')
+        ).order_by('-percentage', '-score', 'finished_at')
 
         # Optional filters
         search = request.query_params.get('search', '').strip()
