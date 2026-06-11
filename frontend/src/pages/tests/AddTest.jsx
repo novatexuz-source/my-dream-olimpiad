@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { API_BASE } from '../../config'
+import { authFetch } from '../../config'
 import './AddTest.css'
 
 const formatPrefillDate = (dateStr) => {
@@ -62,7 +62,7 @@ export default function AddTest() {
 
   useEffect(() => {
     // Load subjects
-    fetch(`${API_BASE}/tests/subjects/`)
+    authFetch('/tests/subjects/')
       .then(res => res.json())
       .then(data => {
         setSubjects(data)
@@ -74,7 +74,7 @@ export default function AddTest() {
       .catch(err => console.error(err))
 
     // Load all existing tests to compute taken grades
-    fetch(`${API_BASE}/tests/list/`)
+    authFetch('/tests/list/')
       .then(res => res.json())
       .then(data => setAllTests(data))
       .catch(err => console.error(err))
@@ -207,7 +207,7 @@ export default function AddTest() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/tests/list/`, {
+      const res = await authFetch('/tests/list/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

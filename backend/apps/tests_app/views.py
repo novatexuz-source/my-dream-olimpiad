@@ -9,12 +9,15 @@ from .serializers import SubjectSerializer, TestSerializer
 class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.all()
     serializer_class = SubjectSerializer
-    permission_classes = [permissions.AllowAny] # Change to IsAuthenticated later if needed
+    permission_classes = [permissions.IsAuthenticated]
 
 class TestViewSet(viewsets.ModelViewSet):
+    # Question payload includes correct answers, so every action (including
+    # list/retrieve) must stay admin-only. Students get questions without
+    # answers via the exams app endpoints.
     queryset = Test.objects.all().order_by('-created_at')
     serializer_class = TestSerializer
-    permission_classes = [permissions.AllowAny] # Change to IsAuthenticated later if needed
+    permission_classes = [permissions.IsAuthenticated]
 
     @action(detail=False, methods=['post'], url_path='reschedule')
     def reschedule(self, request):

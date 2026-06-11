@@ -7,6 +7,10 @@ __pycache__/
 backend/db.sqlite3
 backend/temp_msg_cache.json
 
+# Bot logs
+backend/bot_log.txt
+*.log
+
 # Environments
 backend/.env
 .env

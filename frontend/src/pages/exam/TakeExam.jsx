@@ -19,6 +19,10 @@ export default function TakeExam() {
   const [finishing, setFinishing] = useState(false)
 
   const timerRef = useRef(null)
+  // Ref keeps the interval callback pointing at the latest finish handler
+  // (avoids the stale-closure bug where auto-submit used old state).
+  const finishRef = useRef(() => {})
+  const examCode = localStorage.getItem('exam_code') || ''
 
   useEffect(() => {
     fetchSession()
@@ -34,7 +38,7 @@ export default function TakeExam() {
           if (prev <= 1) {
             clearInterval(timerRef.current)
             // Auto submit when time runs out
-            handleFinishExam(true)
+            finishRef.current(true)
             return 0
           }
           return prev - 1
@@ -44,11 +48,11 @@ export default function TakeExam() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [timeLeft])
+  }, [timeLeft > 0])
 
   const fetchSession = async () => {
     try {
-      const res = await fetch(`${API_BASE}/exams/session/${sessionId}/`)
+      const res = await fetch(`${API_BASE}/exams/session/${sessionId}/?code=${encodeURIComponent(examCode)}`)
       const data = await res.json()
 
       if (res.ok) {
@@ -93,7 +97,8 @@ export default function TakeExam() {
         body: JSON.stringify({
           session_id: sessionId,
           question_id: questionId,
-          selected_answer: option
+          selected_answer: option,
+          unique_code: examCode
         })
       })
 
@@ -119,7 +124,7 @@ export default function TakeExam() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ session_id: sessionId })
+        body: JSON.stringify({ session_id: sessionId, unique_code: examCode })
       })
 
       if (res.ok) {
@@ -134,6 +139,9 @@ export default function TakeExam() {
       setFinishing(false)
     }
   }
+
+  // Keep the timer's auto-submit pointing at the freshest handler
+  finishRef.current = handleFinishExam
 
   const formatTimer = (seconds) => {
     const mins = Math.floor(seconds / 60)
@@ -234,7 +242,7 @@ export default function TakeExam() {
                 )}
 
                 <div className="options-interactive-list">
-                  {['A', 'B', 'C', 'D'].filter(letter => ((currentQuestion[`option_${letter.toLowerCase()}`] || '').trim() !== '')).map(letter => {
+                  {['A', 'B', 'C', 'D'].map(letter => {
                     const optionKey = `option_${letter.toLowerCase()}`
                     const isSelected = answers[currentQuestion.id] === letter
 

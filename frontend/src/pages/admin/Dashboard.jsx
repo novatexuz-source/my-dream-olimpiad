@@ -1,5 +1,7 @@
-import React from 'react';
-import { Users, CheckCircle, XCircle, CreditCard, Clock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Users, CheckCircle, CreditCard, Clock } from 'lucide-react';
+import { authFetch } from '../../config';
 
 const StatCard = ({ title, value, icon: Icon, colorClass }) => (
   <div className="bg-[#1e1e24] p-6 rounded-2xl border border-white/5 shadow-lg relative overflow-hidden group hover:border-white/20 transition-all duration-300">
@@ -14,25 +16,69 @@ const StatCard = ({ title, value, icon: Icon, colorClass }) => (
   </div>
 );
 
+const STATUS_LABELS = {
+  pending: { text: 'Kutilmoqda', color: 'amber' },
+  approved: { text: 'Tasdiqlangan', color: 'emerald' },
+  rejected: { text: 'Rad etilgan', color: 'red' },
+};
+
+const PAYMENT_LABELS = { click: 'Click', payme: 'Payme', cash: 'Naqd' };
+
+const formatMoney = (sum) => {
+  if (sum >= 1_000_000) return `${(sum / 1_000_000).toFixed(1)}M so'm`;
+  return `${sum.toLocaleString('uz-UZ')} so'm`;
+};
+
 export const Dashboard = () => {
+  const navigate = useNavigate();
+  const [participants, setParticipants] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await authFetch('/registration/participants/');
+        if (res.ok) {
+          const data = await res.json();
+          setParticipants(Array.isArray(data) ? data : (data.results || []));
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const approved = participants.filter(p => p.verification_status === 'approved');
+  const pending = participants.filter(p => p.verification_status === 'pending');
+  const revenue = approved.reduce((sum, p) => {
+    const amount = p.payments?.[0]?.amount;
+    return sum + (amount ? Number(amount) : 0);
+  }, 0);
+
+  const recent = [...participants]
+    .sort((a, b) => new Date(b.registered_at) - new Date(a.registered_at))
+    .slice(0, 6);
+
   return (
     <div className="p-8 max-w-7xl mx-auto min-h-screen bg-[#121216] text-white font-sans">
       <div className="mb-8">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">Olimpiada Boshqaruvi</h1>
-        <p className="text-gray-400 mt-2">Hush kelibsiz, asosiy ko'rsatkichlar bilan tanishing.</p>
+        <p className="text-gray-400 mt-2">Xush kelibsiz, asosiy ko'rsatkichlar bilan tanishing.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard title="Jami Ishtirokchilar" value="1,245" icon={Users} colorClass="bg-blue-500" />
-        <StatCard title="Tasdiqlanganlar" value="840" icon={CheckCircle} colorClass="bg-emerald-500" />
-        <StatCard title="Kutayotganlar" value="312" icon={Clock} colorClass="bg-amber-500" />
-        <StatCard title="Kassa (Tasdiqlangan)" value="159.6M so'm" icon={CreditCard} colorClass="bg-purple-500" />
+        <StatCard title="Jami Ishtirokchilar" value={loading ? '…' : participants.length.toLocaleString('uz-UZ')} icon={Users} colorClass="bg-blue-500" />
+        <StatCard title="Tasdiqlanganlar" value={loading ? '…' : approved.length.toLocaleString('uz-UZ')} icon={CheckCircle} colorClass="bg-emerald-500" />
+        <StatCard title="Kutayotganlar" value={loading ? '…' : pending.length.toLocaleString('uz-UZ')} icon={Clock} colorClass="bg-amber-500" />
+        <StatCard title="Kassa (Tasdiqlangan)" value={loading ? '…' : formatMoney(revenue)} icon={CreditCard} colorClass="bg-purple-500" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-[#1e1e24] p-6 rounded-2xl border border-white/5 shadow-lg">
           <h2 className="text-xl font-semibold mb-6 flex items-center gap-2"><div className="w-2 h-6 bg-blue-500 rounded-full"></div>So'nggi Arizalar</h2>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -45,28 +91,30 @@ export const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="text-sm">
-                {[
-                  { name: "Aliyev Vali", grade: 9, subject: "Matematika", payment: "Click", status: "Kutilmoqda", color: "amber" },
-                  { name: "Azizov Sardor", grade: 11, subject: "Fizika", payment: "Payme", status: "Tasdiqlangan", color: "emerald" },
-                  { name: "Sohibova Malika", grade: 8, subject: "Ingliz tili", payment: "Naqd", status: "Kutilmoqda", color: "amber" },
-                ].map((item, idx) => (
-                  <tr key={idx} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="py-4 font-medium">{item.name}</td>
-                    <td className="py-4 text-gray-400">{item.grade}-sinf, {item.subject}</td>
-                    <td className="py-4">
-                      <span className="px-3 py-1 bg-white/10 rounded-full text-xs font-medium border border-white/10">{item.payment}</span>
-                    </td>
-                    <td className="py-4">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full bg-${item.color}-500`}></div>
-                        <span className={`text-${item.color}-400`}>{item.status}</span>
-                      </div>
-                    </td>
-                    <td className="py-4">
-                      <button className="text-blue-400 hover:text-blue-300 transition-colors text-sm font-medium">Ko'rish</button>
-                    </td>
-                  </tr>
-                ))}
+                {recent.length === 0 && !loading && (
+                  <tr><td colSpan={5} className="py-6 text-gray-500 text-center">Hozircha arizalar yo'q</td></tr>
+                )}
+                {recent.map((item) => {
+                  const st = STATUS_LABELS[item.verification_status] || STATUS_LABELS.pending;
+                  return (
+                    <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                      <td className="py-4 font-medium">{item.full_name}</td>
+                      <td className="py-4 text-gray-400">{item.grade}-sinf, {item.subject}</td>
+                      <td className="py-4">
+                        <span className="px-3 py-1 bg-white/10 rounded-full text-xs font-medium border border-white/10">{PAYMENT_LABELS[item.payment_type] || item.payment_type}</span>
+                      </td>
+                      <td className="py-4">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full bg-${st.color}-500`}></div>
+                          <span className={`text-${st.color}-400`}>{st.text}</span>
+                        </div>
+                      </td>
+                      <td className="py-4">
+                        <button onClick={() => navigate('/leads')} className="text-blue-400 hover:text-blue-300 transition-colors text-sm font-medium">Ko'rish</button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -75,14 +123,14 @@ export const Dashboard = () => {
         <div className="bg-[#1e1e24] p-6 rounded-2xl border border-white/5 shadow-lg">
           <h2 className="text-xl font-semibold mb-6 flex items-center gap-2"><div className="w-2 h-6 bg-purple-500 rounded-full"></div>Tezkor Harakatlar</h2>
           <div className="space-y-4">
-            <button className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-blue-500/5 border border-blue-500/20 hover:border-blue-500/40 transition-all text-blue-400 group">
+            <button onClick={() => navigate('/tests/new')} className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-blue-500/5 border border-blue-500/20 hover:border-blue-500/40 transition-all text-blue-400 group">
               <span className="font-medium">Yangi test qo'shish</span>
               <div className="bg-blue-500/20 p-2 rounded-lg group-hover:scale-110 transition-transform">
                 <Users size={16} />
               </div>
             </button>
-            <button className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/40 transition-all text-emerald-400 group">
-              <span className="font-medium">Monitorlarni ochish</span>
+            <button onClick={() => navigate('/results')} className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/40 transition-all text-emerald-400 group">
+              <span className="font-medium">Natijalarni ko'rish</span>
               <div className="bg-emerald-500/20 p-2 rounded-lg group-hover:scale-110 transition-transform">
                 <Clock size={16} />
               </div>

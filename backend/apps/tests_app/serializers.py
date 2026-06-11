@@ -1,5 +1,5 @@
-from datetime import date as date_cls
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import serializers
 from .models import Subject, Test, Question
 
@@ -62,7 +62,7 @@ class TestSerializer(serializers.ModelSerializer):
                 )
 
             # Only ONE future olympiad date allowed across all tests.
-            today = date_cls.today()
+            today = timezone.localdate()
             if test_date >= today:
                 other_future_dates = Test.objects.filter(
                     start_datetime__date__gte=today
@@ -90,7 +90,7 @@ class TestSerializer(serializers.ModelSerializer):
         # If this is a future olympiad date, sync ALL orphaned approved
         # participants (NULL target OR pointing to a no-longer-existing date)
         # to this upcoming date.
-        if test.start_datetime and test.start_datetime.date() >= date_cls.today():
+        if test.start_datetime and test.start_datetime.date() >= timezone.localdate():
             sync_approved_participants_to_upcoming_date(test.start_datetime.date())
 
         return test

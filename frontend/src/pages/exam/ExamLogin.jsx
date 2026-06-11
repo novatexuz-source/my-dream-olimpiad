@@ -44,6 +44,8 @@ export default function ExamLogin() {
       if (res.ok) {
         setParticipantInfo(data.participant)
         setTests(data.tests)
+        // The exam endpoints require this code as proof of identity
+        localStorage.setItem('exam_code', data.participant.unique_code)
       } else {
         setError(data.error || "Tizimga kirishda xatolik yuz berdi.")
       }
@@ -68,7 +70,8 @@ export default function ExamLogin() {
         },
         body: JSON.stringify({
           participant_id: participantInfo.id,
-          test_id: testId
+          test_id: testId,
+          unique_code: participantInfo.unique_code
         })
       })
 

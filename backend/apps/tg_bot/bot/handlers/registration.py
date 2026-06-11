@@ -9,8 +9,9 @@ from asgiref.sync import sync_to_async
 
 router = Router()
 
-# URL of your registration form (HTTPS via Cloudflare Tunnel)
-WEBAPP_URL = "https://my-dream-olimpiad.vercel.app/register"
+# URL of your registration form (live Vercel frontend)
+import os
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://my-dream-olimpiad-4vdk.vercel.app/register")
 
 async def show_confirmation(message: Message, state: FSMContext):
     data = await state.get_data()
@@ -71,7 +72,7 @@ async def cmd_start(message: Message, state: FSMContext):
             reply_markup=keyboard,
             parse_mode="HTML"
         )
-        _save_temp_msg_id(message.from_user.id, msg.message_id)
+        await _save_temp_msg_id(message.from_user.id, msg.message_id)
 
 @router.message(F.text == "📝 Yangi profil qo'shish")
 async def show_new_student_btn(message: Message, state: FSMContext):
@@ -86,23 +87,23 @@ async def show_new_student_btn(message: Message, state: FSMContext):
         reply_markup=keyboard,
         parse_mode="HTML"
     )
-    _save_temp_msg_id(message.from_user.id, msg.message_id)
+    await _save_temp_msg_id(message.from_user.id, msg.message_id)
 
-import json
-import os
-def _save_temp_msg_id(tg_id, msg_id):
-    cache_file = os.path.join(os.path.dirname(__file__), '..', '..', '..', '..', 'temp_msg_cache.json')
-    data = {}
-    if os.path.exists(cache_file):
-        try:
-            with open(cache_file, 'r') as f:
-                data = json.load(f)
-        except Exception:
-            pass
-    data[str(tg_id)] = msg_id
+async def _save_temp_msg_id(tg_id, msg_id):
+    """Track the last bot message per chat in the DB so the web backend can
+    delete it after a successful registration (shared with public_register).
+    """
+    from apps.tg_bot.models import TgMessageCache
+
+    @sync_to_async
+    def _save():
+        TgMessageCache.objects.update_or_create(
+            chat_id=str(tg_id),
+            defaults={'message_ids': [msg_id]}
+        )
+
     try:
-        with open(cache_file, 'w') as f:
-            json.dump(data, f)
+        await _save()
     except Exception:
         pass
 
@@ -257,6 +258,9 @@ async def process_confirm(message: Message, state: FSMContext):
     def create_participant():
         from apps.registration.views import get_next_olympiad_date
         full_name = f"{data['last_name']} {data['first_name']}"
+        # Same 'tg_<id>' format as the web flow, so one user never ends up
+        # with two records under different id formats.
+        telegram_id = f"tg_{message.from_user.id}"
         defaults = {
             'full_name': full_name,
             'phone': data['phone'],
@@ -265,25 +269,30 @@ async def process_confirm(message: Message, state: FSMContext):
             'payment_type': data['payment_type'],
         }
         # Only auto-assign target_test_date for NEW participants (don't overwrite existing)
-        existing = Participant.objects.filter(telegram_id=str(message.from_user.id)).first()
+        existing = Participant.objects.filter(telegram_id=telegram_id).first()
         if not existing:
             defaults['target_test_date'] = get_next_olympiad_date()
         participant, created = Participant.objects.update_or_create(
-            telegram_id=str(message.from_user.id),
+            telegram_id=telegram_id,
             defaults=defaults
         )
-        
+
+        # Same pricing formula as the web registration endpoint
+        subjects_count = max(1, len([s for s in data['subject'].split(',') if s.strip()]))
+        amount = 190000.00 + (subjects_count - 1) * 90000.00
+
         payment, p_created = Payment.objects.get_or_create(
             participant=participant,
             defaults={
                 'type': data['payment_type'],
-                'amount': 190000.00
+                'amount': amount
             }
         )
         if not p_created:
             payment.type = data['payment_type']
+            payment.amount = amount
             payment.save()
-            
+
         return participant
         
     try:
@@ -313,7 +322,9 @@ async def process_edit_field(message: Message, state: FSMContext):
     if message.text == "Sinf":
         await message.answer("Yangi sinfingizni tanlang:", reply_markup=get_grades_keyboard())
     elif message.text == "Fan":
-        subjects = ["Matematika", "Ingliz tili", "Rus tili"]
+        subjects = await sync_to_async(list)(Subject.objects.filter(is_active=True).values_list('name', flat=True))
+        if not subjects:
+            subjects = ["Matematika", "Ingliz tili", "Rus tili"]  # Default fallback
         await message.answer("Yangi fanni tanlang:", reply_markup=get_subjects_keyboard(subjects))
     elif message.text == "To'lov turi":
         await message.answer("Yangi to'lov turini tanlang:", reply_markup=get_payment_types_keyboard())

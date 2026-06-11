@@ -5,7 +5,7 @@ Olimpiada/test platformasi: ro'yxatdan o'tish, qo'ng'iroqlar, testlar, natijalar
 ## Stack
 
 - **Backend**: Django 5 + DRF + SimpleJWT
-- **Frontend**: React 19 + Vite + Tailwind CSS + Zustand
+- **Frontend**: React 19 + Vite + Tailwind CSS
 - **Database**: PostgreSQL (Supabase)
 - **Telegram bot**: Aiogram 3 (polling)
 - **Deploy**: Render (backend) + Vercel (frontend) + Fly.io (bot)
@@ -54,10 +54,12 @@ See `backend/.env.example` and `frontend/.env.example`.
 
 **Backend required:**
 - `SECRET_KEY` — Django secret (50+ chars, random)
-- `DEBUG` — `True` for dev, `False` for prod
+- `DEBUG` — `True` for dev, `False` for prod (defaults to `False` when unset)
 - `ALLOWED_HOSTS` — comma-separated hosts
 - `DATABASE_URL` — Supabase Session Pooler URL (port 5432, NOT 6543)
 - `BOT_TOKEN` — from @BotFather
+- `ADMIN_USERNAME` / `ADMIN_PASSWORD` — admin account; migrations create/rotate the admin from these (REQUIRED in production, no hardcoded fallback)
+- `WEBAPP_URL` — frontend register page URL used in Telegram buttons
 - `CORS_ALLOWED_ORIGINS` — frontend URL (prod only)
 - `CSRF_TRUSTED_ORIGINS` — frontend + backend URLs (prod only)
 

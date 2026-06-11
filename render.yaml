@@ -21,6 +21,12 @@ services:
         sync: false
       - key: BOT_TOKEN
         sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: WEBAPP_URL
+        value: https://my-dream-olimpiad-4vdk.vercel.app/register
       - key: CORS_ALLOWED_ORIGINS
         sync: false
       - key: CSRF_TRUSTED_ORIGINS

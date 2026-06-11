@@ -5,7 +5,7 @@ import {
   CalendarDays, X, Plus, Users, Sparkles, ArrowRight, History, Hourglass,
   Pencil, Save
 } from 'lucide-react'
-import { API_BASE } from '../../config'
+import { authFetch } from '../../config'
 import './Tests.css'
 
 const SUBJECTS_ORDER = ['Matematika', 'Ingliz-tili', 'Rus-tili']
@@ -66,9 +66,9 @@ export default function Tests() {
     setLoading(true)
     try {
       const [testsRes, partRes, subjectsRes] = await Promise.all([
-        fetch(`${API_BASE}/tests/list/`),
-        fetch(`${API_BASE}/registration/participants/`),
-        fetch(`${API_BASE}/tests/subjects/`)
+        authFetch('/tests/list/'),
+        authFetch('/registration/participants/'),
+        authFetch('/tests/subjects/')
       ])
       const testsData = await testsRes.json()
       const partData = await partRes.json()
@@ -113,7 +113,7 @@ export default function Tests() {
       }
       if (newStartTime) payload.start_time = newStartTime
       if (newEndTime) payload.end_time = newEndTime
-      const res = await fetch(`${API_BASE}/tests/list/reschedule/`, {
+      const res = await authFetch('/tests/list/reschedule/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -136,7 +136,7 @@ export default function Tests() {
   const handleDelete = async (id) => {
     setDeleting(true)
     try {
-      const res = await fetch(`${API_BASE}/tests/list/${id}/`, { method: 'DELETE' })
+      const res = await authFetch(`/tests/list/${id}/`, { method: 'DELETE' })
       if (res.ok || res.status === 204) {
         setConfirmDeleteId(null)
         setSelectedTest(null)

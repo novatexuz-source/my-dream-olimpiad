@@ -6,7 +6,7 @@ import {
   CalendarDays, Hourglass, Sparkles, Trash2, AlertTriangle
 } from 'lucide-react'
 import './Calls.css'
-import { API_BASE } from '../../config'
+import { authFetch } from '../../config'
 
 const CALL_STATUSES = {
   new:        { label: 'Yangi',       icon: Phone,            color: 'call-new',       emoji: '📞' },
@@ -75,7 +75,7 @@ export default function Calls() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/registration/participants/`)
+      const res = await authFetch('/registration/participants/')
       const data = await res.json()
       const list = Array.isArray(data) ? data : (data.results || [])
       setParticipants(list.filter(p => p.verification_status === 'approved'))
@@ -91,7 +91,7 @@ export default function Calls() {
   const updateCallStatus = async (id, newStatus) => {
     setUpdatingId(id)
     try {
-      const res = await fetch(`${API_BASE}/registration/participants/${id}/call-status/`, {
+      const res = await authFetch(`/registration/participants/${id}/call-status/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ call_status: newStatus })
@@ -113,7 +113,7 @@ export default function Calls() {
     setUpdatingId(group.phone)
     try {
       await Promise.all(ids.map(id =>
-        fetch(`${API_BASE}/registration/participants/${id}/call-status/`, {
+        authFetch(`/registration/participants/${id}/call-status/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ call_status: newStatus })
@@ -158,7 +158,7 @@ export default function Calls() {
     setDeleting(true)
     try {
       await Promise.all(deleteConfirm.ids.map(id =>
-        fetch(`${API_BASE}/registration/participants/${id}/`, { method: 'DELETE' })
+        authFetch(`/registration/participants/${id}/`, { method: 'DELETE' })
       ))
       setParticipants(prev => prev.filter(p => !deleteConfirm.ids.includes(p.id)))
       setDeleteConfirm(null)

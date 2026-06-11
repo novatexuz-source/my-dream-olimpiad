@@ -22,7 +22,7 @@ import {
   XCircle,
   TrendingUp
 } from 'lucide-react'
-import { API_BASE } from '../../config'
+import { authFetch } from '../../config'
 import './Leads.css'
 
 const STATUS_MAP = {
@@ -81,7 +81,7 @@ export default function Leads({ defaultStatus = 'all' }) {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/registration/participants/`)
+      const res = await authFetch('/registration/participants/')
       const data = await res.json()
       const list = Array.isArray(data) ? data : (data.results || [])
       setParticipants(list)
@@ -128,7 +128,7 @@ export default function Leads({ defaultStatus = 'all' }) {
   const handleApprove = async (id) => {
     setActionLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/registration/participants/${id}/approve/`, { method: 'POST' })
+      const res = await authFetch(`/registration/participants/${id}/approve/`, { method: 'POST' })
       if (res.ok) {
         await fetchData()
         setSelected(null)
@@ -151,7 +151,7 @@ export default function Leads({ defaultStatus = 'all' }) {
     if (!rejectReason.trim()) return
     setActionLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/registration/participants/${rejectingId}/reject/`, {
+      const res = await authFetch(`/registration/participants/${rejectingId}/reject/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: rejectReason })

@@ -1,9 +1,10 @@
 from django.utils import timezone
 from django.db import transaction
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.throttling import AnonRateThrottle
 from apps.registration.models import Participant
 from apps.tests_app.models import Test, Question
 from apps.exams.models import ExamSession, ExamAnswer
@@ -11,8 +12,60 @@ from apps.results.models import Result
 from apps.exams.serializers import ExamSessionSerializer
 import datetime
 
+
+class ExamLoginThrottle(AnonRateThrottle):
+    scope = 'exam_login'
+
+
+def _finalize_session(session, finished_at=None):
+    """Mark a session completed and compute its score from saved answers.
+
+    Single source of truth for scoring — used by auto-expiry checks and the
+    explicit finish endpoint.
+    """
+    test = session.test
+    with transaction.atomic():
+        session.status = 'completed'
+        session.finished_at = finished_at or (
+            session.started_at + datetime.timedelta(minutes=test.duration_minutes)
+        )
+        answers = ExamAnswer.objects.filter(session=session)
+        correct = answers.filter(is_correct=True).count()
+        total = test.questions.count()
+        session.correct_count = correct
+        session.wrong_count = total - correct
+        session.total_questions = total
+        session.percentage = (correct / total * 100) if total > 0 else 0
+        session.score = correct * 10  # 10 points per question
+        session.save()
+
+        Result.objects.get_or_create(
+            session=session,
+            defaults={
+                'participant': session.participant,
+                'percentage': session.percentage,
+            }
+        )
+
+
+def _get_session_for_code(session_id, unique_code):
+    """Return (session, error_response). The caller must supply the
+    participant's unique_code — session ids alone are not proof of identity.
+    """
+    if not unique_code:
+        return None, Response({'error': "Unikal kod kiritilishi shart!"}, status=status.HTTP_403_FORBIDDEN)
+    try:
+        session = ExamSession.objects.select_related('participant', 'test').get(id=session_id)
+    except ExamSession.DoesNotExist:
+        return None, Response({'error': "Sessiya topilmadi!"}, status=status.HTTP_404_NOT_FOUND)
+    if session.participant.unique_code != str(unique_code):
+        return None, Response({'error': "Unikal kod mos kelmadi!"}, status=status.HTTP_403_FORBIDDEN)
+    return session, None
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([ExamLoginThrottle])
 def exam_login(request):
     unique_code = request.data.get('unique_code')
     if not unique_code:
@@ -36,7 +89,7 @@ def exam_login(request):
         subject__name__in=subjects_list,
         grade=participant.grade,
         is_active=True
-    )
+    ).select_related('subject')
 
     now = timezone.now()
     tests_data = []
@@ -44,7 +97,7 @@ def exam_login(request):
     for t in tests:
         # Check if session exists
         session = ExamSession.objects.filter(participant=participant, test=t).first()
-        
+
         session_status = 'not_started'
         session_id = None
         remaining_seconds = 0
@@ -56,29 +109,7 @@ def exam_login(request):
                 elapsed = (now - session.started_at).total_seconds()
                 limit = t.duration_minutes * 60
                 if elapsed >= limit:
-                    # Auto finish
-                    with transaction.atomic():
-                        session.status = 'completed'
-                        session.finished_at = session.started_at + datetime.timedelta(minutes=t.duration_minutes)
-                        # Calculate results
-                        answers = ExamAnswer.objects.filter(session=session)
-                        correct = answers.filter(is_correct=True).count()
-                        total = t.questions.count()
-                        session.correct_count = correct
-                        session.wrong_count = total - correct
-                        session.total_questions = total
-                        session.percentage = (correct / total * 100) if total > 0 else 0
-                        session.score = correct * 10 # 10 points per question
-                        session.save()
-                        
-                        # Create Result record if it doesn't exist
-                        Result.objects.get_or_create(
-                            session=session,
-                            defaults={
-                                'participant': participant,
-                                'percentage': session.percentage
-                            }
-                        )
+                    _finalize_session(session)
                     session_status = 'completed'
                 else:
                     session_status = 'in_progress'
@@ -121,35 +152,19 @@ def exam_login(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_exam_session(request, session_id):
-    try:
-        session = ExamSession.objects.get(id=session_id)
-    except ExamSession.DoesNotExist:
-        return Response({'error': "Sessiya topilmadi!"}, status=status.HTTP_404_NOT_FOUND)
+    session, error = _get_session_for_code(session_id, request.query_params.get('code'))
+    if error:
+        return error
 
     now = timezone.now()
     limit = session.test.duration_minutes * 60
     elapsed = (now - session.started_at).total_seconds()
 
     if session.status == 'in_progress' and elapsed >= limit:
-        with transaction.atomic():
-            session.status = 'completed'
-            session.finished_at = session.started_at + datetime.timedelta(minutes=session.test.duration_minutes)
-            answers = ExamAnswer.objects.filter(session=session)
-            correct = answers.filter(is_correct=True).count()
-            total = session.test.questions.count()
-            session.correct_count = correct
-            session.wrong_count = total - correct
-            session.total_questions = total
-            session.percentage = (correct / total * 100) if total > 0 else 0
-            session.score = correct * 10
-            session.save()
-            Result.objects.get_or_create(
-                session=session,
-                defaults={'participant': session.participant, 'percentage': session.percentage}
-            )
+        _finalize_session(session)
 
     serializer = ExamSessionSerializer(session)
-    
+
     # Calculate exact remaining seconds for the countdown
     remaining_seconds = 0
     if session.status == 'in_progress':
@@ -166,15 +181,24 @@ def get_exam_session(request, session_id):
 def start_exam(request):
     participant_id = request.data.get('participant_id')
     test_id = request.data.get('test_id')
+    unique_code = request.data.get('unique_code')
 
     if not participant_id or not test_id:
         return Response({'error': "participant_id va test_id kiritilishi shart!"}, status=status.HTTP_400_BAD_REQUEST)
+    if not unique_code:
+        return Response({'error': "Unikal kod kiritilishi shart!"}, status=status.HTTP_403_FORBIDDEN)
 
     try:
         participant = Participant.objects.get(id=participant_id)
         test = Test.objects.get(id=test_id)
     except (Participant.DoesNotExist, Test.DoesNotExist):
         return Response({'error': "Ishtirokchi yoki test topilmadi!"}, status=status.HTTP_404_NOT_FOUND)
+
+    # Identity + eligibility checks: code must match and participant approved
+    if participant.unique_code != str(unique_code):
+        return Response({'error': "Unikal kod mos kelmadi!"}, status=status.HTTP_403_FORBIDDEN)
+    if participant.verification_status != 'approved':
+        return Response({'error': "Faqat tasdiqlangan ishtirokchilar test topshira oladi!"}, status=status.HTTP_403_FORBIDDEN)
 
     # Check if a session already exists
     session = ExamSession.objects.filter(participant=participant, test=test).first()
@@ -188,29 +212,15 @@ def start_exam(request):
             elapsed = (now - session.started_at).total_seconds()
             limit = test.duration_minutes * 60
             if elapsed >= limit:
-                # Close the session and score it from saved answers
-                with transaction.atomic():
-                    session.status = 'completed'
-                    session.finished_at = session.started_at + datetime.timedelta(minutes=test.duration_minutes)
-                    answers = ExamAnswer.objects.filter(session=session)
-                    correct = answers.filter(is_correct=True).count()
-                    total = test.questions.count()
-                    session.correct_count = correct
-                    session.wrong_count = total - correct
-                    session.total_questions = total
-                    session.percentage = (correct / total * 100) if total > 0 else 0
-                    session.score = correct * 10
-                    session.save()
-                    Result.objects.get_or_create(
-                        session=session,
-                        defaults={'participant': participant, 'percentage': session.percentage}
-                    )
+                _finalize_session(session)
                 return Response({'error': "Sizning test topshirish vaqtingiz tugagan!"}, status=status.HTTP_400_BAD_REQUEST)
-            
+
             serializer = ExamSessionSerializer(session)
             return Response(serializer.data)
 
     # Validate test window before starting a new session
+    if not test.is_active:
+        return Response({'error': "Test faol emas!"}, status=status.HTTP_400_BAD_REQUEST)
     if test.start_datetime and now < test.start_datetime:
         return Response({'error': "Test hali boshlanmadi!"}, status=status.HTTP_400_BAD_REQUEST)
     if test.end_datetime and now > test.end_datetime:
@@ -239,11 +249,17 @@ def submit_answer(request):
     if not session_id or not question_id or not selected_answer:
         return Response({'error': "Barcha maydonlar to'ldirilishi shart!"}, status=status.HTTP_400_BAD_REQUEST)
 
+    session, error = _get_session_for_code(session_id, request.data.get('unique_code'))
+    if error:
+        return error
+
     try:
-        session = ExamSession.objects.get(id=session_id)
-        question = Question.objects.get(id=question_id)
-    except (ExamSession.DoesNotExist, Question.DoesNotExist):
-        return Response({'error': "Sessiya yoki savol topilmadi!"}, status=status.HTTP_404_NOT_FOUND)
+        question = Question.objects.get(id=question_id, test=session.test)
+    except Question.DoesNotExist:
+        return Response({'error': "Savol topilmadi!"}, status=status.HTTP_404_NOT_FOUND)
+
+    if selected_answer not in ('A', 'B', 'C', 'D'):
+        return Response({'error': "Javob A, B, C yoki D bo'lishi kerak!"}, status=status.HTTP_400_BAD_REQUEST)
 
     if session.status != 'in_progress':
         return Response({'error': "Sessiya faol emas!"}, status=status.HTTP_400_BAD_REQUEST)
@@ -253,28 +269,13 @@ def submit_answer(request):
     elapsed = (now - session.started_at).total_seconds()
     limit = session.test.duration_minutes * 60
     if elapsed >= limit:
-        with transaction.atomic():
-            session.status = 'completed'
-            session.finished_at = session.started_at + datetime.timedelta(minutes=session.test.duration_minutes)
-            answers = ExamAnswer.objects.filter(session=session)
-            correct = answers.filter(is_correct=True).count()
-            total = session.test.questions.count()
-            session.correct_count = correct
-            session.wrong_count = total - correct
-            session.total_questions = total
-            session.percentage = (correct / total * 100) if total > 0 else 0
-            session.score = correct * 10
-            session.save()
-            Result.objects.get_or_create(
-                session=session,
-                defaults={'participant': session.participant, 'percentage': session.percentage}
-            )
+        _finalize_session(session)
         return Response({'error': "Test vaqti tugadi!"}, status=status.HTTP_400_BAD_REQUEST)
 
     is_correct = (question.correct_answer == selected_answer)
 
     # Save or update answer
-    answer, created = ExamAnswer.objects.update_or_create(
+    ExamAnswer.objects.update_or_create(
         session=session,
         question=question,
         defaults={
@@ -295,42 +296,15 @@ def finish_exam(request):
     if not session_id:
         return Response({'error': "Sessiya ID kiritilishi shart!"}, status=status.HTTP_400_BAD_REQUEST)
 
-    try:
-        session = ExamSession.objects.get(id=session_id)
-    except ExamSession.DoesNotExist:
-        return Response({'error': "Sessiya topilmadi!"}, status=status.HTTP_404_NOT_FOUND)
+    session, error = _get_session_for_code(session_id, request.data.get('unique_code'))
+    if error:
+        return error
 
     if session.status == 'completed':
         # Already finished, just return status
         return Response({'success': True, 'already_finished': True})
 
-    now = timezone.now()
-    
-    with transaction.atomic():
-        session.status = 'completed'
-        session.finished_at = now
-        
-        # Calculate scores
-        test = session.test
-        answers = ExamAnswer.objects.filter(session=session)
-        correct = answers.filter(is_correct=True).count()
-        total = test.questions.count()
-        
-        session.correct_count = correct
-        session.wrong_count = total - correct
-        session.total_questions = total
-        session.percentage = (correct / total * 100) if total > 0 else 0
-        session.score = correct * 10
-        session.save()
-
-        # Save to results
-        Result.objects.get_or_create(
-            session=session,
-            defaults={
-                'participant': session.participant,
-                'percentage': session.percentage
-            }
-        )
+    _finalize_session(session, finished_at=timezone.now())
 
     return Response({
         'success': True,
@@ -344,10 +318,9 @@ def finish_exam(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_exam_result(request, session_id):
-    try:
-        session = ExamSession.objects.get(id=session_id)
-    except ExamSession.DoesNotExist:
-        return Response({'error': "Sessiya topilmadi!"}, status=status.HTTP_404_NOT_FOUND)
+    session, error = _get_session_for_code(session_id, request.query_params.get('code'))
+    if error:
+        return error
 
     if session.status != 'completed':
         return Response({'error': "Test hali yakunlanmagan!"}, status=status.HTTP_400_BAD_REQUEST)

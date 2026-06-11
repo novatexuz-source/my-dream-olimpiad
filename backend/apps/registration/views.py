@@ -1,14 +1,22 @@
-import random
+import logging
+import secrets
 import string
 import requests
-from datetime import date as date_cls
+from django.utils import timezone
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from django.conf import settings
 from .models import Participant, Payment
 from .serializers import ParticipantSerializer
 from decouple import config
+
+logger = logging.getLogger(__name__)
+
+
+class PublicRegisterThrottle(AnonRateThrottle):
+    scope = 'public_register'
 
 
 def _resolve_chat_id(telegram_id):
@@ -31,7 +39,7 @@ def _resolve_chat_id(telegram_id):
 def get_next_olympiad_date():
     """Return the next upcoming olympiad date (earliest future Test date) or None."""
     from apps.tests_app.models import Test
-    today = date_cls.today()
+    today = timezone.localdate()
     next_test = (
         Test.objects
         .filter(start_datetime__date__gte=today)
@@ -43,7 +51,7 @@ def get_next_olympiad_date():
 class ParticipantViewSet(viewsets.ModelViewSet):
     queryset = Participant.objects.all().order_by('-registered_at')
     serializer_class = ParticipantSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -56,7 +64,7 @@ class ParticipantViewSet(viewsets.ModelViewSet):
     
     def generate_unique_code(self):
         while True:
-            code = ''.join(random.choices(string.digits, k=6))
+            code = ''.join(secrets.choice(string.digits) for _ in range(6))
             if not Participant.objects.filter(unique_code=code).exists():
                 return code
 
@@ -85,10 +93,11 @@ class ParticipantViewSet(viewsets.ModelViewSet):
                         "chat_id": real_tg_id,
                         "text": text,
                         "parse_mode": "HTML"
-                    }
+                    },
+                    timeout=10
                 )
-            except Exception as e:
-                print("Failed to send TG message", e)
+            except Exception:
+                logger.exception("Failed to send approval Telegram message to %s", real_tg_id)
 
         return Response({'status': 'approved', 'code': code})
         
@@ -113,10 +122,11 @@ class ParticipantViewSet(viewsets.ModelViewSet):
                         "chat_id": real_tg_id,
                         "text": text,
                         "parse_mode": "HTML"
-                    }
+                    },
+                    timeout=10
                 )
             except Exception:
-                pass
+                logger.exception("Failed to send rejection Telegram message to %s", real_tg_id)
 
         return Response({'status': 'rejected'})
 
@@ -142,15 +152,23 @@ class ParticipantViewSet(viewsets.ModelViewSet):
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
+@throttle_classes([PublicRegisterThrottle])
 def public_register(request):
     """Public endpoint for web form registration (no auth required)"""
     data = request.data
-    
+
     required = ['full_name', 'phone', 'grade', 'subject', 'payment_type']
     for field in required:
         if not data.get(field):
             return Response({'error': f'{field} maydoni to\'ldirilishi shart'}, status=status.HTTP_400_BAD_REQUEST)
-    
+
+    try:
+        grade = int(data['grade'])
+    except (TypeError, ValueError):
+        return Response({'error': 'Sinf raqam bo\'lishi kerak'}, status=status.HTTP_400_BAD_REQUEST)
+    if not 1 <= grade <= 11:
+        return Response({'error': 'Sinf 1 dan 11 gacha bo\'lishi kerak'}, status=status.HTTP_400_BAD_REQUEST)
+
     phone = data['phone'].replace(' ', '').replace('-', '')
     
     participant_id = data.get('id')
@@ -162,7 +180,7 @@ def public_register(request):
             participant = Participant.objects.get(id=participant_id)
             participant.full_name = data['full_name']
             participant.phone = phone
-            participant.grade = int(data['grade'])
+            participant.grade = grade
             participant.subject = data['subject']
             participant.payment_type = data['payment_type']
             participant.save()
@@ -174,7 +192,7 @@ def public_register(request):
             telegram_id=data.get('telegram_id') or f'web_{phone}',
             full_name=data['full_name'],
             phone=phone,
-            grade=int(data['grade']),
+            grade=grade,
             subject=data['subject'],
             payment_type=data['payment_type'],
             target_test_date=get_next_olympiad_date(),
@@ -182,8 +200,11 @@ def public_register(request):
         created = True
     
     
-    subjects_list = data.get('subject', '').split(',')
-    subjects_count = max(1, len([s.strip() for s in subjects_list if s.strip()]))
+    subjects_list = [s.strip() for s in data.get('subject', '').split(',') if s.strip()]
+    # Cap at the number of real subjects so a crafted request can't inflate the bill.
+    from apps.tests_app.models import Subject
+    max_subjects = max(1, Subject.objects.count() or 3)
+    subjects_count = min(max(1, len(subjects_list)), max_subjects)
     calculated_amount = 190000.00 + (subjects_count - 1) * 90000.00
     
     payment, p_created = Payment.objects.get_or_create(
@@ -221,34 +242,27 @@ def public_register(request):
             f"<i>Ma'lumotlaringizda xato bo'lsa, quyidagi tugma orqali tahrirlashingiz mumkin.</i>"
         )
         
-        WEBAPP_URL = "https://my-dream-olimpiad-4vdk.vercel.app/register"
-        import json, os
+        WEBAPP_URL = config('WEBAPP_URL', default='https://my-dream-olimpiad-4vdk.vercel.app/register')
         reply_markup = {
             "inline_keyboard": [
                 [{"text": "✏️ Tahrirlash", "web_app": {"url": f"{WEBAPP_URL}?id={participant.id}"}}],
                 [{"text": "🗑 O'chirish", "callback_data": f"del_prof_{participant.id}"}]
             ]
         }
-        
+
         try:
-            cache_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'temp_msg_cache.json')
-            
-            # Delete all previously tracked bot messages
-            if os.path.exists(cache_file):
-                try:
-                    with open(cache_file, 'r') as f:
-                        cache_data = json.load(f)
-                    old_msg_ids = cache_data.pop(str(real_tg_id), [])
-                    if isinstance(old_msg_ids, int):
-                        old_msg_ids = [old_msg_ids]
-                    for old_id in old_msg_ids:
+            from apps.tg_bot.models import TgMessageCache
+
+            # Delete all previously tracked bot messages for this chat
+            cache_row = TgMessageCache.objects.filter(chat_id=str(real_tg_id)).first()
+            if cache_row:
+                for old_id in cache_row.message_ids or []:
+                    try:
                         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/deleteMessage", json={
                             "chat_id": real_tg_id, "message_id": old_id
-                        })
-                    with open(cache_file, 'w') as f:
-                        json.dump(cache_data, f)
-                except Exception:
-                    pass
+                        }, timeout=10)
+                    except Exception:
+                        logger.warning("Failed to delete old TG message %s for %s", old_id, real_tg_id)
 
             # Send confirmation message (with all inline buttons - no reply keyboard needed)
             conf_resp = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
@@ -256,23 +270,17 @@ def public_register(request):
                 "text": text,
                 "reply_markup": reply_markup,
                 "parse_mode": "HTML"
-            }).json()
-            
+            }, timeout=10).json()
+
             # Track this message ID for cleanup next time
             if conf_resp.get("ok"):
-                try:
-                    existing = {}
-                    if os.path.exists(cache_file):
-                        with open(cache_file, 'r') as f:
-                            existing = json.load(f)
-                    existing[str(real_tg_id)] = [conf_resp["result"]["message_id"]]
-                    with open(cache_file, 'w') as f:
-                        json.dump(existing, f)
-                except Exception:
-                    pass
-                    
-        except Exception as e:
-            print("Failed to send TG message on register", e)
+                TgMessageCache.objects.update_or_create(
+                    chat_id=str(real_tg_id),
+                    defaults={'message_ids': [conf_resp["result"]["message_id"]]}
+                )
+
+        except Exception:
+            logger.exception("Failed to send TG message on register to %s", real_tg_id)
     
     return Response({
         'success': True,

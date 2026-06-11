@@ -33,6 +33,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/monitor" element={<Monitor />} />
 
+
         {/* Student Exam Routes */}
         <Route path="/exam/login" element={<ExamLogin />} />
         <Route path="/exam/take/:sessionId" element={<TakeExam />} />

@@ -17,7 +17,8 @@ export default function ExamResult() {
 
   const fetchResult = async () => {
     try {
-      const res = await fetch(`${API_BASE}/exams/result/${sessionId}/`)
+      const examCode = localStorage.getItem('exam_code') || ''
+      const res = await fetch(`${API_BASE}/exams/result/${sessionId}/?code=${encodeURIComponent(examCode)}`)
       const data = await res.json()
 
       if (res.ok) {
