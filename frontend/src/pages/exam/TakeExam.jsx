@@ -211,7 +211,7 @@ export default function TakeExam() {
                   className={`nav-num-btn ${isCurrent ? 'active' : ''} ${isAnswered ? 'answered' : ''} ${isSaving ? 'saving' : ''}`}
                   onClick={() => setCurrentIdx(idx)}
                 >
-                  {q.order_number}
+                  {idx + 1}
                 </button>
               )
             })}
@@ -242,18 +242,21 @@ export default function TakeExam() {
                 )}
 
                 <div className="options-interactive-list">
-                  {['A', 'B', 'C', 'D'].map(letter => {
-                    const optionKey = `option_${letter.toLowerCase()}`
-                    const isSelected = answers[currentQuestion.id] === letter
+                  {(currentQuestion.options
+                    ? currentQuestion.options
+                    : ['A', 'B', 'C', 'D'].map(l => ({ key: l, text: currentQuestion[`option_${l.toLowerCase()}`] }))
+                  ).map((opt, i) => {
+                    const displayLetter = ['A', 'B', 'C', 'D'][i] || String(i + 1)
+                    const isSelected = answers[currentQuestion.id] === opt.key
 
                     return (
                       <div
-                        key={letter}
+                        key={opt.key}
                         className={`option-card-interactive ${isSelected ? 'selected' : ''}`}
-                        onClick={() => handleOptionClick(currentQuestion.id, letter)}
+                        onClick={() => handleOptionClick(currentQuestion.id, opt.key)}
                       >
-                        <div className="option-letter-badge">{letter}</div>
-                        <div className="option-text-content">{currentQuestion[optionKey]}</div>
+                        <div className="option-letter-badge">{displayLetter}</div>
+                        <div className="option-text-content">{opt.text}</div>
                       </div>
                     )
                   })}
