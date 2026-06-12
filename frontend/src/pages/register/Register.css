@@ -37,11 +37,13 @@
 }
 
 .reg-logo-img {
+  /* Tailwind preflight makes <img> display:block, so center it explicitly */
+  display: block;
+  margin: 0 auto 16px;
   width: 92px;
   height: 92px;
   border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 16px;
   box-shadow:
     0 0 0 4px #ffffff,
     0 0 0 6px rgba(30, 58, 110, 0.15),
