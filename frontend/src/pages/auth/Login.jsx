@@ -70,7 +70,7 @@ export default function Login() {
       if (res.ok) {
         localStorage.setItem('access_token', data.access)
         localStorage.setItem('refresh_token', data.refresh)
-        navigate('/leads')
+        navigate('/admin/dashboard')
       } else {
         setError("Telefon raqam yoki parol noto'g'ri")
       }

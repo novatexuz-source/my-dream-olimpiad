@@ -1,25 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, CheckCircle, CreditCard, Clock } from 'lucide-react';
+import { Users, CheckCircle, CreditCard, Clock, FilePlus2, Trophy, ArrowRight } from 'lucide-react';
 import { authFetch } from '../../config';
 
-const StatCard = ({ title, value, icon: Icon, colorClass }) => (
-  <div className="bg-[#1e1e24] p-6 rounded-2xl border border-white/5 shadow-lg relative overflow-hidden group hover:border-white/20 transition-all duration-300">
-    <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-300 ${colorClass}`}></div>
-    <div className="flex items-center justify-between mb-4 relative z-10">
-      <h3 className="text-gray-400 font-medium text-sm">{title}</h3>
-      <div className={`p-2 rounded-lg ${colorClass.replace('bg-', 'bg-').replace('500', '500/20')} text-${colorClass.split('-')[1]}-400`}>
-        <Icon size={20} />
-      </div>
-    </div>
-    <div className="text-3xl font-bold text-white relative z-10">{value}</div>
-  </div>
-);
+// Tailwind can't generate runtime-built class names (`bg-${color}-500`),
+// so every accent variant is spelled out statically here.
+const ACCENTS = {
+  blue:    { iconBg: 'bg-blue-50',    iconText: 'text-blue-600',    bar: 'bg-blue-500' },
+  emerald: { iconBg: 'bg-emerald-50', iconText: 'text-emerald-600', bar: 'bg-emerald-500' },
+  amber:   { iconBg: 'bg-amber-50',   iconText: 'text-amber-600',   bar: 'bg-amber-500' },
+  purple:  { iconBg: 'bg-purple-50',  iconText: 'text-purple-600',  bar: 'bg-purple-500' },
+};
 
 const STATUS_LABELS = {
-  pending: { text: 'Kutilmoqda', color: 'amber' },
-  approved: { text: 'Tasdiqlangan', color: 'emerald' },
-  rejected: { text: 'Rad etilgan', color: 'red' },
+  pending:  { text: 'Kutilmoqda',   badge: 'bg-amber-50 text-amber-700 border-amber-200',     dot: 'bg-amber-500' },
+  approved: { text: 'Tasdiqlangan', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  rejected: { text: 'Rad etilgan',  badge: 'bg-red-50 text-red-700 border-red-200',           dot: 'bg-red-500' },
 };
 
 const PAYMENT_LABELS = { click: 'Click', payme: 'Payme', cash: 'Naqd' };
@@ -27,6 +23,22 @@ const PAYMENT_LABELS = { click: 'Click', payme: 'Payme', cash: 'Naqd' };
 const formatMoney = (sum) => {
   if (sum >= 1_000_000) return `${(sum / 1_000_000).toFixed(1)}M so'm`;
   return `${sum.toLocaleString('uz-UZ')} so'm`;
+};
+
+const StatCard = ({ title, value, icon: Icon, accent }) => {
+  const a = ACCENTS[accent] || ACCENTS.blue;
+  return (
+    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300 relative overflow-hidden">
+      <div className={`absolute left-0 top-0 bottom-0 w-1 ${a.bar}`}></div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-gray-500 font-medium text-sm">{title}</h3>
+        <div className={`p-2 rounded-lg ${a.iconBg} ${a.iconText}`}>
+          <Icon size={20} />
+        </div>
+      </div>
+      <div className="text-3xl font-bold text-gray-900">{value}</div>
+    </div>
+  );
 };
 
 export const Dashboard = () => {
@@ -62,55 +74,71 @@ export const Dashboard = () => {
     .slice(0, 6);
 
   return (
-    <div className="p-8 max-w-7xl mx-auto min-h-screen bg-[#121216] text-white font-sans">
+    <div className="max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">Olimpiada Boshqaruvi</h1>
-        <p className="text-gray-400 mt-2">Xush kelibsiz, asosiy ko'rsatkichlar bilan tanishing.</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Olimpiada Boshqaruvi</h1>
+        <p className="text-gray-500 mt-1">Xush kelibsiz, asosiy ko'rsatkichlar bilan tanishing.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard title="Jami Ishtirokchilar" value={loading ? '…' : participants.length.toLocaleString('uz-UZ')} icon={Users} colorClass="bg-blue-500" />
-        <StatCard title="Tasdiqlanganlar" value={loading ? '…' : approved.length.toLocaleString('uz-UZ')} icon={CheckCircle} colorClass="bg-emerald-500" />
-        <StatCard title="Kutayotganlar" value={loading ? '…' : pending.length.toLocaleString('uz-UZ')} icon={Clock} colorClass="bg-amber-500" />
-        <StatCard title="Kassa (Tasdiqlangan)" value={loading ? '…' : formatMoney(revenue)} icon={CreditCard} colorClass="bg-purple-500" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <StatCard title="Jami Ishtirokchilar" value={loading ? '…' : participants.length.toLocaleString('uz-UZ')} icon={Users} accent="blue" />
+        <StatCard title="Tasdiqlanganlar" value={loading ? '…' : approved.length.toLocaleString('uz-UZ')} icon={CheckCircle} accent="emerald" />
+        <StatCard title="Kutayotganlar" value={loading ? '…' : pending.length.toLocaleString('uz-UZ')} icon={Clock} accent="amber" />
+        <StatCard title="Kassa (Tasdiqlangan)" value={loading ? '…' : formatMoney(revenue)} icon={CreditCard} accent="purple" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-[#1e1e24] p-6 rounded-2xl border border-white/5 shadow-lg">
-          <h2 className="text-xl font-semibold mb-6 flex items-center gap-2"><div className="w-2 h-6 bg-blue-500 rounded-full"></div>So'nggi Arizalar</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <div className="w-1.5 h-6 bg-blue-500 rounded-full"></div>
+              So'nggi Arizalar
+            </h2>
+            <button
+              onClick={() => navigate('/leads')}
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1 transition-colors"
+            >
+              Barchasi <ArrowRight size={14} />
+            </button>
+          </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/10 text-gray-400 text-sm">
-                  <th className="pb-4 font-medium">F.I.SH</th>
-                  <th className="pb-4 font-medium">Sinf / Fan</th>
-                  <th className="pb-4 font-medium">To'lov</th>
-                  <th className="pb-4 font-medium">Holat</th>
-                  <th className="pb-4 font-medium">Harakat</th>
+                <tr className="border-b border-gray-200 text-gray-500 text-xs uppercase tracking-wide">
+                  <th className="pb-3 font-medium">F.I.SH</th>
+                  <th className="pb-3 font-medium">Sinf / Fan</th>
+                  <th className="pb-3 font-medium">To'lov</th>
+                  <th className="pb-3 font-medium">Holat</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
+                {loading && (
+                  <tr><td colSpan={4} className="py-6 text-gray-400 text-center">Yuklanmoqda…</td></tr>
+                )}
                 {recent.length === 0 && !loading && (
-                  <tr><td colSpan={5} className="py-6 text-gray-500 text-center">Hozircha arizalar yo'q</td></tr>
+                  <tr><td colSpan={4} className="py-6 text-gray-400 text-center">Hozircha arizalar yo'q</td></tr>
                 )}
                 {recent.map((item) => {
                   const st = STATUS_LABELS[item.verification_status] || STATUS_LABELS.pending;
                   return (
-                    <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                      <td className="py-4 font-medium">{item.full_name}</td>
-                      <td className="py-4 text-gray-400">{item.grade}-sinf, {item.subject}</td>
-                      <td className="py-4">
-                        <span className="px-3 py-1 bg-white/10 rounded-full text-xs font-medium border border-white/10">{PAYMENT_LABELS[item.payment_type] || item.payment_type}</span>
+                    <tr
+                      key={item.id}
+                      onClick={() => navigate('/leads')}
+                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      <td className="py-3.5 font-medium text-gray-900">{item.full_name}</td>
+                      <td className="py-3.5 text-gray-500">{item.grade}-sinf, {item.subject}</td>
+                      <td className="py-3.5">
+                        <span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                          {PAYMENT_LABELS[item.payment_type] || item.payment_type}
+                        </span>
                       </td>
-                      <td className="py-4">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full bg-${st.color}-500`}></div>
-                          <span className={`text-${st.color}-400`}>{st.text}</span>
-                        </div>
-                      </td>
-                      <td className="py-4">
-                        <button onClick={() => navigate('/leads')} className="text-blue-400 hover:text-blue-300 transition-colors text-sm font-medium">Ko'rish</button>
+                      <td className="py-3.5">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${st.badge}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`}></span>
+                          {st.text}
+                        </span>
                       </td>
                     </tr>
                   );
@@ -120,18 +148,36 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-[#1e1e24] p-6 rounded-2xl border border-white/5 shadow-lg">
-          <h2 className="text-xl font-semibold mb-6 flex items-center gap-2"><div className="w-2 h-6 bg-purple-500 rounded-full"></div>Tezkor Harakatlar</h2>
-          <div className="space-y-4">
-            <button onClick={() => navigate('/tests/new')} className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-blue-500/5 border border-blue-500/20 hover:border-blue-500/40 transition-all text-blue-400 group">
+        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm h-fit">
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-5">
+            <div className="w-1.5 h-6 bg-purple-500 rounded-full"></div>
+            Tezkor Harakatlar
+          </h2>
+          <div className="space-y-3">
+            <button
+              onClick={() => navigate('/tests/new')}
+              className="w-full flex items-center justify-between p-4 rounded-xl bg-blue-50 border border-blue-100 hover:border-blue-300 hover:bg-blue-100/60 transition-all text-blue-700 group"
+            >
               <span className="font-medium">Yangi test qo'shish</span>
-              <div className="bg-blue-500/20 p-2 rounded-lg group-hover:scale-110 transition-transform">
-                <Users size={16} />
+              <div className="bg-blue-100 p-2 rounded-lg group-hover:scale-110 transition-transform">
+                <FilePlus2 size={16} />
               </div>
             </button>
-            <button onClick={() => navigate('/results')} className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/40 transition-all text-emerald-400 group">
+            <button
+              onClick={() => navigate('/results')}
+              className="w-full flex items-center justify-between p-4 rounded-xl bg-emerald-50 border border-emerald-100 hover:border-emerald-300 hover:bg-emerald-100/60 transition-all text-emerald-700 group"
+            >
               <span className="font-medium">Natijalarni ko'rish</span>
-              <div className="bg-emerald-500/20 p-2 rounded-lg group-hover:scale-110 transition-transform">
+              <div className="bg-emerald-100 p-2 rounded-lg group-hover:scale-110 transition-transform">
+                <Trophy size={16} />
+              </div>
+            </button>
+            <button
+              onClick={() => navigate('/pending')}
+              className="w-full flex items-center justify-between p-4 rounded-xl bg-amber-50 border border-amber-100 hover:border-amber-300 hover:bg-amber-100/60 transition-all text-amber-700 group"
+            >
+              <span className="font-medium">Kutilayotgan arizalar</span>
+              <div className="bg-amber-100 p-2 rounded-lg group-hover:scale-110 transition-transform">
                 <Clock size={16} />
               </div>
             </button>

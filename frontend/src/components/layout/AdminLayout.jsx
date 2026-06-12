@@ -54,6 +54,11 @@ export default function AdminLayout() {
         </div>
 
         <nav className="sidebar-nav">
+          <NavLink to="/admin/dashboard" className="nav-item" onClick={() => setSidebarOpen(false)}>
+            <span className="nav-icon">📊</span>
+            Boshqaruv paneli
+          </NavLink>
+          <div style={{ margin: '12px 0', borderBottom: '1px solid #f3f4f6' }}></div>
           <NavLink to="/leads" className="nav-item" onClick={() => setSidebarOpen(false)}>
             <span className="nav-icon">📋</span>
             Lidlar (Barchasi)
