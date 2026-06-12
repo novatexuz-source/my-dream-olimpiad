@@ -563,10 +563,13 @@ export default function Tests() {
                 type="date"
                 value={schedDate}
                 onChange={e => { setSchedDate(e.target.value); setScheduleError('') }}
-                min={new Date().toISOString().slice(0, 10)}
                 disabled={scheduling}
                 autoFocus
               />
+              <p className="sched-date-note">
+                O'tgan sanani ham tanlash mumkin — bunda testlar "O'tgan olimpiadalar"ga o'tadi
+                va topshirganlar "qatnashgan" bo'ladi.
+              </p>
             </div>
 
             <div className="reschedule-time-row">

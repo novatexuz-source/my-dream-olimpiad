@@ -1395,6 +1395,18 @@
   text-align: left;
 }
 
+.sched-date-note {
+  font-size: 0.77rem;
+  color: #c2410c;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 7px 10px;
+  margin: 8px 0 0;
+  text-align: left;
+  line-height: 1.45;
+}
+
 .reschedule-error {
   background: #fef2f2;
   color: #b91c1c;
