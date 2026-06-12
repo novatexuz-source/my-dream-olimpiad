@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import './Register.css'
 import { API_BASE } from '../../config'
+import logoImg from '../../assets/logo.jpg'
 
 // Telegram WebApp SDK
 const tg = window.Telegram?.WebApp
@@ -198,7 +199,7 @@ export default function Register() {
     <div className="reg-wrapper">
       {/* Header */}
       <div className="reg-header">
-        <div className="reg-logo">🏆</div>
+        <img src={logoImg} alt="My Dream International Olimpiad" className="reg-logo-img" />
         <h1>My Dream International Olimpiad</h1>
         <p>Ro'yxatdan o'tish</p>
       </div>

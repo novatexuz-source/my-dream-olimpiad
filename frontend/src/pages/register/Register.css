@@ -1,6 +1,7 @@
-/* ===========================
-   Register Page — Light / White
-   =========================== */
+/* ==================================================
+   Register Page — brand: navy (#1e3a6e) + gold (#eab308)
+   (logo: My Dream School International Olimpiad)
+   ================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
@@ -16,8 +17,8 @@
   width: 100%;
   position: relative;
   background:
-    radial-gradient(1100px 600px at 15% -10%, rgba(124, 92, 255, 0.10), transparent 60%),
-    radial-gradient(900px 500px at 95% 10%, rgba(255, 122, 69, 0.10), transparent 55%),
+    radial-gradient(1100px 600px at 15% -10%, rgba(30, 58, 110, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 95% 10%, rgba(234, 179, 8, 0.10), transparent 55%),
     linear-gradient(160deg, #ffffff 0%, #f4f6fb 50%, #ffffff 100%);
   display: flex;
   flex-direction: column;
@@ -35,16 +36,22 @@
   z-index: 1;
 }
 
-.reg-logo {
-  font-size: 60px;
-  margin-bottom: 14px;
-  filter: drop-shadow(0 6px 18px rgba(255, 122, 69, 0.35));
-  animation: float 3s ease-in-out infinite;
+.reg-logo-img {
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 16px;
+  box-shadow:
+    0 0 0 4px #ffffff,
+    0 0 0 6px rgba(30, 58, 110, 0.15),
+    0 14px 34px rgba(30, 58, 110, 0.28);
+  animation: float 3.5s ease-in-out infinite;
 }
 
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  50% { transform: translateY(-7px); }
 }
 
 .reg-header h1 {
@@ -52,19 +59,16 @@
   font-weight: 900;
   letter-spacing: -0.5px;
   margin: 0 0 8px;
-  background: linear-gradient(90deg, #f5a623, #ff7a45 45%, #ff4e50);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #1e3a6e;
 }
 
 .reg-header p {
-  color: #94a3b8;
+  color: #b8860b;
   font-size: 12px;
   margin: 0;
   letter-spacing: 3px;
   text-transform: uppercase;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Progress */
@@ -92,10 +96,10 @@
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ffe16b, #ff4e50);
+  background: linear-gradient(90deg, #ffd34d, #eab308);
   transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 3px;
-  box-shadow: 0 0 12px rgba(255, 158, 92, 0.5);
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.45);
 }
 
 .progress-step {
@@ -123,17 +127,17 @@
 }
 
 .progress-step.active .step-circle {
-  border-color: #ffd24d;
-  background: linear-gradient(135deg, #ffe16b, #ff4e50);
-  color: #1a1530;
-  box-shadow: 0 6px 18px rgba(255, 158, 92, 0.45);
+  border-color: #eab308;
+  background: linear-gradient(135deg, #ffd34d, #eab308);
+  color: #1e3a6e;
+  box-shadow: 0 6px 18px rgba(234, 179, 8, 0.45);
   transform: scale(1.08);
 }
 
 .progress-step.done .step-circle {
-  border-color: #34d399;
-  background: #10b981;
-  color: #fff;
+  border-color: #1e3a6e;
+  background: #1e3a6e;
+  color: #ffd34d;
 }
 
 .progress-step span {
@@ -144,7 +148,7 @@
 
 .progress-step.active span,
 .progress-step.done span {
-  color: #1e293b;
+  color: #1e3a6e;
 }
 
 /* Card */
@@ -155,7 +159,7 @@
   padding: 38px;
   width: 100%;
   max-width: 540px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 24px 60px rgba(30, 58, 110, 0.10), 0 2px 8px rgba(30, 58, 110, 0.05);
   animation: slideUp 0.45s ease;
   position: relative;
   z-index: 1;
@@ -169,7 +173,7 @@
 .step-title {
   font-size: 22px;
   font-weight: 800;
-  color: #0f172a;
+  color: #16294d;
   margin: 0 0 8px;
   letter-spacing: -0.3px;
 }
@@ -212,7 +216,7 @@
   letter-spacing: 0.2px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .form-group label::before {
@@ -220,7 +224,7 @@
   width: 4px;
   height: 14px;
   border-radius: 3px;
-  background: linear-gradient(180deg, #ffe16b, #ff4e50);
+  background: linear-gradient(180deg, #ffd34d, #1e3a6e);
   display: inline-block;
 }
 
@@ -231,7 +235,7 @@
   border: 1.5px solid #e2e8f0;
   border-radius: 14px;
   padding: 15px 16px;
-  color: #0f172a;
+  color: #16294d;
   font-size: 16px;
   font-weight: 500;
   font-family: 'Inter', sans-serif;
@@ -245,9 +249,9 @@
 }
 
 .form-group input:focus {
-  border-color: #ff9d5c;
+  border-color: #2b4d8f;
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(255, 157, 92, 0.15);
+  box-shadow: 0 0 0 4px rgba(30, 58, 110, 0.12);
 }
 
 .form-group input.error {
@@ -284,17 +288,17 @@
 }
 
 .grade-btn:hover {
-  border-color: #ffcf70;
-  background: #fff8e6;
-  color: #92400e;
+  border-color: #2b4d8f;
+  background: #eef3fb;
+  color: #1e3a6e;
 }
 
 .grade-btn.selected {
-  background: linear-gradient(135deg, #ffe16b, #ff4e50);
+  background: linear-gradient(135deg, #2b4d8f, #1e3a6e);
   border-color: transparent;
-  color: #1a1530;
+  color: #ffffff;
   font-weight: 800;
-  box-shadow: 0 6px 18px rgba(255, 158, 92, 0.4);
+  box-shadow: 0 6px 18px rgba(30, 58, 110, 0.35);
 }
 
 /* Subject */
@@ -323,16 +327,16 @@
 }
 
 .subject-btn:hover {
-  border-color: #ffcf70;
-  background: #fff8e6;
+  border-color: #2b4d8f;
+  background: #eef3fb;
 }
 
 .subject-btn.selected {
-  border-color: #f5b94d;
-  background: #fff7e6;
-  color: #b45309;
+  border-color: #1e3a6e;
+  background: #eef3fb;
+  color: #1e3a6e;
   font-weight: 700;
-  box-shadow: 0 0 0 1px rgba(245, 185, 77, 0.5);
+  box-shadow: 0 0 0 1px rgba(30, 58, 110, 0.45);
 }
 
 .multi-hint {
@@ -343,8 +347,8 @@
 }
 
 .selected-subjects {
-  background: #fff8e6;
-  border: 1px solid #fde68a;
+  background: #fdf6e3;
+  border: 1px solid #f3dd9a;
   border-radius: 12px;
   padding: 11px 14px;
   font-size: 14px;
@@ -353,20 +357,20 @@
 }
 
 .selected-subjects strong {
-  color: #b45309;
+  color: #92660a;
 }
 
 /* Price badge */
 .price-badge {
   display: inline-block;
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #fff;
+  background: linear-gradient(135deg, #ffd34d, #eab308);
+  color: #1e3a6e;
   font-size: 24px;
   font-weight: 800;
   padding: 11px 26px;
   border-radius: 50px;
   margin-bottom: 22px;
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 6px 20px rgba(234, 179, 8, 0.40);
 }
 
 /* Payment */
@@ -393,15 +397,15 @@
 }
 
 .payment-btn:hover {
-  border-color: #6ee7b7;
-  background: #ecfdf5;
+  border-color: #2b4d8f;
+  background: #eef3fb;
 }
 
 .payment-btn.selected {
-  border-color: #34d399;
-  background: #ecfdf5;
-  color: #065f46;
-  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.5);
+  border-color: #1e3a6e;
+  background: #eef3fb;
+  color: #1e3a6e;
+  box-shadow: 0 0 0 1px rgba(30, 58, 110, 0.45);
 }
 
 .pay-icon {
@@ -410,19 +414,19 @@
 
 .check {
   margin-left: auto;
-  color: #10b981;
+  color: #b8860b;
   font-weight: 800;
   font-size: 18px;
 }
 
 /* Confirm */
 .confirm-notice {
-  background: #fff8e6;
-  border: 1px solid #fde68a;
+  background: #fdf6e3;
+  border: 1px solid #f3dd9a;
   border-radius: 14px;
   padding: 15px 16px;
   font-size: 14px;
-  color: #92400e;
+  color: #92660a;
   margin-bottom: 22px;
   line-height: 1.6;
 }
@@ -457,7 +461,7 @@
 
 .confirm-row strong {
   font-size: 15px;
-  color: #0f172a;
+  color: #16294d;
   font-weight: 700;
   text-align: right;
 }
@@ -499,37 +503,37 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ffe16b, #ff4e50);
+  background: linear-gradient(135deg, #2b4d8f, #1e3a6e);
   border: none;
   border-radius: 14px;
   padding: 15px 28px;
-  color: #1a1530;
+  color: #ffffff;
   font-size: 16px;
   font-weight: 800;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
   transition: all 0.2s;
-  box-shadow: 0 8px 22px rgba(255, 158, 92, 0.35);
+  box-shadow: 0 8px 22px rgba(30, 58, 110, 0.35);
   flex: 1;
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(255, 158, 92, 0.5);
+  box-shadow: 0 12px 30px rgba(30, 58, 110, 0.45);
 }
 
 .btn-submit {
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, #ffd34d, #eab308);
   border: none;
   border-radius: 14px;
   padding: 15px 28px;
-  color: #fff;
+  color: #1e3a6e;
   font-size: 16px;
   font-weight: 800;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
   transition: all 0.2s;
-  box-shadow: 0 8px 22px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 8px 22px rgba(234, 179, 8, 0.40);
   flex: 1;
   display: flex;
   align-items: center;
@@ -538,7 +542,7 @@
 
 .btn-submit:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.55);
+  box-shadow: 0 12px 30px rgba(234, 179, 8, 0.55);
 }
 
 .btn-submit:disabled {
@@ -550,8 +554,8 @@
 .spinner {
   width: 20px;
   height: 20px;
-  border: 3px solid rgba(255, 255, 255, 0.45);
-  border-top-color: #fff;
+  border: 3px solid rgba(30, 58, 110, 0.35);
+  border-top-color: #1e3a6e;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   display: inline-block;
@@ -570,7 +574,7 @@
   width: 100%;
   max-width: 500px;
   text-align: center;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 24px 60px rgba(30, 58, 110, 0.10), 0 2px 8px rgba(30, 58, 110, 0.05);
   animation: slideUp 0.45s ease;
   position: relative;
   z-index: 1;
@@ -591,7 +595,7 @@
 .reg-success-card h2 {
   font-size: 27px;
   font-weight: 800;
-  color: #059669;
+  color: #1e3a6e;
   margin: 0 0 16px;
 }
 
@@ -602,7 +606,7 @@
   margin: 0 0 10px;
 }
 
-.reg-success-card strong { color: #0f172a; }
+.reg-success-card strong { color: #16294d; }
 
 .success-details {
   background: #f8fafc;
@@ -621,25 +625,25 @@
 
 .detail-row:last-child { border: none; }
 .detail-row span { color: #64748b; font-size: 14px; }
-.detail-row strong { color: #0f172a; font-size: 14px; }
+.detail-row strong { color: #16294d; font-size: 14px; }
 
 .warning-note {
-  background: #fff8e6;
-  border: 1px solid #fde68a;
+  background: #fdf6e3;
+  border: 1px solid #f3dd9a;
   border-radius: 12px;
   padding: 13px;
-  color: #92400e !important;
+  color: #92660a !important;
   font-size: 13px !important;
   margin: 16px 0 24px !important;
 }
 
 .btn-back-to-bot {
   width: 100%;
-  background: #f1f5f9;
-  border: 1.5px solid #e2e8f0;
+  background: linear-gradient(135deg, #2b4d8f, #1e3a6e);
+  border: none;
   border-radius: 16px;
   padding: 16px;
-  color: #475569;
+  color: #ffffff;
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
@@ -649,10 +653,11 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
+  box-shadow: 0 8px 22px rgba(30, 58, 110, 0.30);
 }
 
 .btn-back-to-bot:hover {
-  background: #e2e8f0;
+  box-shadow: 0 12px 30px rgba(30, 58, 110, 0.42);
   transform: translateY(-1px);
 }
 
@@ -665,4 +670,5 @@
   .reg-header h1 { font-size: 22px; }
   .step-title { font-size: 20px; }
   .form-group input { font-size: 16px; }
+  .reg-logo-img { width: 76px; height: 76px; }
 }
