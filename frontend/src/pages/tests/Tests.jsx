@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   Trash2, ChevronDown, ChevronUp, Clock, HelpCircle,
   CalendarDays, X, Plus, Users, Sparkles, ArrowRight, History, Hourglass,
-  Pencil, Save
+  Pencil, Save, AlertTriangle, CalendarPlus
 } from 'lucide-react'
 import { authFetch } from '../../config'
 import './Tests.css'
@@ -56,6 +56,13 @@ export default function Tests() {
   const [newEndTime, setNewEndTime] = useState('')
   const [rescheduling, setRescheduling] = useState(false)
   const [rescheduleError, setRescheduleError] = useState('')
+  // "Assign date to undated (AI) tests" modal
+  const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [schedDate, setSchedDate] = useState('')
+  const [schedStart, setSchedStart] = useState('09:00:00')
+  const [schedEnd, setSchedEnd] = useState('23:59:00')
+  const [scheduling, setScheduling] = useState(false)
+  const [scheduleError, setScheduleError] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -133,6 +140,44 @@ export default function Tests() {
     }
   }
 
+  const openScheduleUndated = () => {
+    // Pre-fill with the existing upcoming date if there is one (so AI tests join it)
+    setSchedDate(upcomingGroup?.dateStr || '')
+    setSchedStart('09:00:00')
+    setSchedEnd('23:59:00')
+    setScheduleError('')
+    setScheduleOpen(true)
+  }
+
+  const handleScheduleUndated = async () => {
+    if (!schedDate) return
+    setScheduling(true)
+    setScheduleError('')
+    try {
+      const res = await authFetch('/tests/list/schedule-undated/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to_date: schedDate,
+          start_time: schedStart || undefined,
+          end_time: schedEnd || undefined,
+        })
+      })
+      if (res.ok) {
+        setScheduleOpen(false)
+        await fetchAll()
+      } else {
+        const err = await res.json()
+        setScheduleError(err.error || "Xatolik yuz berdi")
+      }
+    } catch (e) {
+      console.error(e)
+      setScheduleError("Tarmoq xatosi")
+    } finally {
+      setScheduling(false)
+    }
+  }
+
   const handleDelete = async (id) => {
     setDeleting(true)
     try {
@@ -155,7 +200,7 @@ export default function Tests() {
     return map
   }, [subjects])
 
-  const { upcomingGroup, pastGroups, pendingParticipants, hasUpcoming } = useMemo(() => {
+  const { upcomingGroup, pastGroups, pendingParticipants, hasUpcoming, undatedTests } = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
@@ -208,6 +253,7 @@ export default function Tests() {
       pastGroups: past,
       pendingParticipants: pending,
       hasUpcoming: !!upcoming,
+      undatedTests: dateMap['unknown'] || [],
     }
   }, [tests, participants])
 
@@ -248,6 +294,35 @@ export default function Tests() {
         </div>
       ) : (
         <div className="tests-content">
+          {/* Undated (AI-imported) tests — no start_datetime, so invisible until scheduled */}
+          {undatedTests.length > 0 && (
+            <div className="undated-block">
+              <div className="undated-banner">
+                <div className="undated-banner-left">
+                  <div className="undated-icon">
+                    <AlertTriangle size={24} strokeWidth={2.2} />
+                  </div>
+                  <div>
+                    <h3>Sana belgilanmagan testlar</h3>
+                    <p>
+                      {undatedTests.length} ta test (AI orqali qo'shilgan) sanasi yo'qligi uchun ishtirokchilarga ko'rinmayapti.
+                      Olimpiada sanasini belgilang — shunda ular faollashadi.
+                    </p>
+                  </div>
+                </div>
+                <button className="btn-schedule-undated" onClick={openScheduleUndated}>
+                  <CalendarPlus size={17} />
+                  <span>Sana belgilash</span>
+                </button>
+              </div>
+              <DateGroupView
+                group={{ tests: undatedTests }}
+                isPast={false}
+                onTestClick={setSelectedTest}
+              />
+            </div>
+          )}
+
           {/* Pending participants pool — when no future date exists */}
           {pendingParticipants.length > 0 && !hasUpcoming && (
             <div className="pending-pool-card">
@@ -458,6 +533,91 @@ export default function Tests() {
                   <>
                     <Save size={15} />
                     Saqlash
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Undated Tests Modal */}
+      {scheduleOpen && (
+        <div className="modal-overlay" onClick={() => !scheduling && setScheduleOpen(false)}>
+          <div className="reschedule-modal-card" onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => !scheduling && setScheduleOpen(false)}>
+              <X size={20} />
+            </button>
+            <div className="reschedule-modal-icon">
+              <CalendarPlus size={28} />
+            </div>
+            <h3 className="reschedule-modal-title">Testlarga sana belgilash</h3>
+            <p className="reschedule-modal-hint">
+              {undatedTests.length} ta sanasiz test tanlangan sanaga biriktiriladi va barcha tasdiqlangan
+              ishtirokchilar shu olimpiadaga avtomatik ulanadi.
+            </p>
+
+            <div className="reschedule-input-group">
+              <label>Olimpiada sanasi</label>
+              <input
+                type="date"
+                value={schedDate}
+                onChange={e => { setSchedDate(e.target.value); setScheduleError('') }}
+                min={new Date().toISOString().slice(0, 10)}
+                disabled={scheduling}
+                autoFocus
+              />
+            </div>
+
+            <div className="reschedule-time-row">
+              <div className="reschedule-input-group">
+                <label>⏱ Boshlanish vaqti</label>
+                <input
+                  type="time"
+                  step="1"
+                  value={schedStart}
+                  onChange={e => { setSchedStart(e.target.value); setScheduleError('') }}
+                  disabled={scheduling}
+                />
+              </div>
+              <div className="reschedule-input-group">
+                <label>🏁 Tugash vaqti</label>
+                <input
+                  type="time"
+                  step="1"
+                  value={schedEnd}
+                  onChange={e => { setSchedEnd(e.target.value); setScheduleError('') }}
+                  disabled={scheduling}
+                />
+              </div>
+            </div>
+            <p className="reschedule-time-hint">
+              Ishtirokchilar shu vaqt oralig'ida test topshira oladi
+            </p>
+
+            {scheduleError && (
+              <div className="reschedule-error">{scheduleError}</div>
+            )}
+
+            <div className="reschedule-modal-actions">
+              <button
+                className="btn-cancel-resched"
+                onClick={() => setScheduleOpen(false)}
+                disabled={scheduling}
+              >
+                Bekor qilish
+              </button>
+              <button
+                className="btn-save-resched"
+                onClick={handleScheduleUndated}
+                disabled={scheduling || !schedDate}
+              >
+                {scheduling ? (
+                  <>Belgilanmoqda...</>
+                ) : (
+                  <>
+                    <CalendarPlus size={15} />
+                    Sanani belgilash
                   </>
                 )}
               </button>

@@ -1,10 +1,22 @@
-from datetime import datetime, date as date_cls
+from datetime import datetime, date as date_cls, time as time_cls
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
 from .models import Subject, Test
 from .serializers import SubjectSerializer, TestSerializer
+
+
+def _parse_hms(s, default=None):
+    """Parse 'HH:MM:SS' or 'HH:MM' into a time, falling back to `default`."""
+    if not s:
+        return default
+    for fmt in ('%H:%M:%S', '%H:%M'):
+        try:
+            return datetime.strptime(s, fmt).time()
+        except ValueError:
+            continue
+    return default
 
 class SubjectViewSet(viewsets.ModelViewSet):
     queryset = Subject.objects.all()
@@ -18,6 +30,75 @@ class TestViewSet(viewsets.ModelViewSet):
     queryset = Test.objects.all().order_by('-created_at')
     serializer_class = TestSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['post'], url_path='schedule-undated')
+    def schedule_undated(self, request):
+        """Assign an olympiad date/time to all tests that have no start_datetime
+        (e.g. AI-imported tests). Body:
+        {
+          "to_date":    "YYYY-MM-DD"    (required),
+          "start_time": "HH:MM:SS"      (optional, default 09:00:00),
+          "end_time":   "HH:MM:SS"      (optional, default 23:59:00)
+        }
+        After scheduling, approved participants are synced onto this date so the
+        olympiad becomes visible and takeable.
+        """
+        from apps.registration.models import Participant
+        from django.utils.timezone import make_aware
+        from .serializers import sync_approved_participants_to_upcoming_date
+
+        to_date_str = request.data.get('to_date')
+        if not to_date_str:
+            return Response({'error': "to_date kerak"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return Response(
+                {'error': "Sana noto'g'ri formatda (YYYY-MM-DD bo'lishi kerak)"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        start_t = _parse_hms(request.data.get('start_time'), time_cls(9, 0, 0))
+        end_t = _parse_hms(request.data.get('end_time'), time_cls(23, 59, 0))
+
+        undated = list(Test.objects.filter(start_datetime__isnull=True))
+        if not undated:
+            return Response(
+                {'error': "Sana belgilanmagan testlar topilmadi"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Block if a dated test for the same subject+grade already sits on to_date.
+        existing_keys = set(
+            Test.objects.filter(start_datetime__date=to_date)
+            .exclude(start_datetime__isnull=True)
+            .values_list('subject_id', 'grade')
+        )
+        conflicts = [t for t in undated if (t.subject_id, t.grade) in existing_keys]
+        if conflicts:
+            names = ', '.join(f"{t.subject.name} {t.grade}-sinf" for t in conflicts[:5])
+            return Response(
+                {'error': f"{to_date.strftime('%d.%m.%Y')} sanasida quyidagilar allaqachon mavjud: {names}. Boshqa sana tanlang."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        start_dt = make_aware(datetime.combine(to_date, start_t))
+        end_dt = make_aware(datetime.combine(to_date, end_t))
+
+        with transaction.atomic():
+            count = 0
+            for test in undated:
+                test.start_datetime = start_dt
+                test.end_datetime = end_dt
+                test.save(update_fields=['start_datetime', 'end_datetime'])
+                count += 1
+            synced = sync_approved_participants_to_upcoming_date(to_date)
+
+        return Response({
+            'updated_tests': count,
+            'updated_participants': synced,
+            'to_date': to_date_str,
+        })
 
     @action(detail=False, methods=['post'], url_path='reschedule')
     def reschedule(self, request):
