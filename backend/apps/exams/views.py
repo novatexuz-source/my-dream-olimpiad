@@ -1,3 +1,8 @@
+import html
+import logging
+import os
+
+import requests
 from django.utils import timezone
 from django.db import transaction
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
@@ -12,9 +17,52 @@ from apps.results.models import Result
 from apps.exams.serializers import ExamSessionSerializer
 import datetime
 
+logger = logging.getLogger(__name__)
+
 
 class ExamLoginThrottle(AnonRateThrottle):
     scope = 'exam_login'
+
+
+def _send_result_notification(session):
+    """Push the final score to the Telegram chat that registered this student.
+
+    Fired once per session (when its Result row is first created) so neither
+    the explicit finish endpoint nor the auto-expiry paths can double-send.
+    """
+    from apps.registration.views import _resolve_chat_id
+
+    chat_id = _resolve_chat_id(session.participant.telegram_id)
+    bot_token = os.getenv('BOT_TOKEN')
+    if not chat_id or not bot_token:
+        return
+
+    text = (
+        f"🏁 <b>Test yakunlandi!</b>\n\n"
+        f"👤 <b>{html.escape(session.participant.full_name)}</b>\n"
+        f"📚 {html.escape(session.test.subject.name)} — {html.escape(session.test.title)} ({session.test.grade}-sinf)\n\n"
+        f"✅ To'g'ri javoblar: <b>{session.correct_count} ta</b>\n"
+        f"❌ Xato/javobsiz: <b>{session.wrong_count} ta</b>\n"
+        f"📊 Natija: <b>{session.percentage:.0f}%</b>\n"
+        f"🏆 Ball: <b>{session.score}</b>"
+    )
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{bot_token}/sendMessage",
+            json={
+                "chat_id": chat_id,
+                "text": text,
+                "parse_mode": "HTML",
+                "reply_markup": {
+                    "inline_keyboard": [[
+                        {"text": "📋 Javoblar tafsiloti", "callback_data": f"res_{session.id}"}
+                    ]]
+                },
+            },
+            timeout=8,
+        )
+    except Exception:
+        logger.exception("Failed to send result notification for session %s", session.id)
 
 
 def _finalize_session(session, finished_at=None):
@@ -39,13 +87,15 @@ def _finalize_session(session, finished_at=None):
         session.score = correct * 10  # 10 points per question
         session.save()
 
-        Result.objects.get_or_create(
+        result, result_created = Result.objects.get_or_create(
             session=session,
             defaults={
                 'participant': session.participant,
                 'percentage': session.percentage,
             }
         )
+        if result_created:
+            transaction.on_commit(lambda: _send_result_notification(session))
 
 
 def _get_session_for_code(session_id, unique_code):

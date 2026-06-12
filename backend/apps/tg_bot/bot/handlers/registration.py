@@ -46,7 +46,8 @@ async def cmd_start(message: Message, state: FSMContext):
     if exists:
         keyboard = ReplyKeyboardMarkup(
             keyboard=[
-                [KeyboardButton(text="👥 Profillar"), KeyboardButton(text="📝 Yangi profil qo'shish")]
+                [KeyboardButton(text="👥 Profillar"), KeyboardButton(text="📝 Yangi profil qo'shish")],
+                [KeyboardButton(text="📊 Natijalarim")]
             ],
             resize_keyboard=True
         )
@@ -149,6 +150,126 @@ async def show_profiles(message: Message, state: FSMContext):
         await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
 
 from aiogram.types import CallbackQuery
+
+import html as html_lib
+
+
+def _result_summary_text(session):
+    return (
+        f"👤 <b>{html_lib.escape(session.participant.full_name)}</b>\n"
+        f"📚 {html_lib.escape(session.test.subject.name)} — {html_lib.escape(session.test.title)} ({session.test.grade}-sinf)\n"
+        f"✅ To'g'ri: <b>{session.correct_count} ta</b>  ❌ Xato/javobsiz: <b>{session.wrong_count} ta</b>\n"
+        f"📊 Natija: <b>{session.percentage:.0f}%</b>  🏆 Ball: <b>{session.score}</b>"
+    )
+
+
+@router.message(F.text == "📊 Natijalarim")
+async def show_my_results(message: Message, state: FSMContext):
+    from apps.exams.models import ExamSession
+
+    telegram_id = f"tg_{message.from_user.id}"
+
+    @sync_to_async
+    def get_sessions():
+        return list(
+            ExamSession.objects
+            .filter(participant__telegram_id=telegram_id, status='completed')
+            .select_related('participant', 'test', 'test__subject')
+            .order_by('-finished_at')[:20]
+        )
+
+    sessions = await get_sessions()
+    if not sessions:
+        await message.answer(
+            "Sizda hali yakunlangan testlar yo'q.\n"
+            "Test topshirilgach, natija shu yerga avtomatik yuboriladi."
+        )
+        return
+
+    for session in sessions:
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📋 Javoblar tafsiloti", callback_data=f"res_{session.id}")]
+        ])
+        await message.answer(_result_summary_text(session), reply_markup=keyboard, parse_mode="HTML")
+
+
+@router.callback_query(F.data.startswith("res_"))
+async def show_result_details(callback: CallbackQuery):
+    """Per-question breakdown: which questions were answered right/wrong.
+
+    The correct option itself is only revealed after the test window closes,
+    so an early finisher can't leak answers to students still taking it.
+    """
+    from django.core.exceptions import ValidationError
+    from django.utils import timezone
+    from apps.exams.models import ExamSession, ExamAnswer
+
+    session_id = callback.data.replace("res_", "")
+    telegram_id = f"tg_{callback.from_user.id}"
+
+    @sync_to_async
+    def build_report():
+        try:
+            session = (
+                ExamSession.objects
+                .select_related('participant', 'test', 'test__subject')
+                .get(id=session_id)
+            )
+        except (ExamSession.DoesNotExist, ValueError, ValidationError):
+            return None
+        if session.participant.telegram_id != telegram_id:
+            return None
+        if session.status != 'completed':
+            return 'not_finished'
+
+        answers = {a.question_id: a for a in ExamAnswer.objects.filter(session=session)}
+        reveal = bool(session.test.end_datetime and timezone.now() > session.test.end_datetime)
+
+        lines = []
+        for q in session.test.questions.all():
+            text = q.question_text.strip()
+            qtext = html_lib.escape(text[:60] + ('…' if len(text) > 60 else ''))
+            answer = answers.get(q.id)
+            if answer is None or not answer.selected_answer:
+                line = f"{q.order_number}. ⬜ {qtext} — <i>javob berilmagan</i>"
+            elif answer.is_correct:
+                line = f"{q.order_number}. ✅ {qtext} — javobingiz: <b>{answer.selected_answer}</b>"
+            else:
+                line = f"{q.order_number}. ❌ {qtext} — javobingiz: <b>{answer.selected_answer}</b>"
+            if reveal and (answer is None or not answer.is_correct):
+                line += f" (to'g'ri javob: <b>{q.correct_answer}</b>)"
+            lines.append(line)
+
+        header = (
+            f"📋 <b>Javoblar tafsiloti</b>\n\n"
+            f"{_result_summary_text(session)}\n"
+        )
+        if not reveal:
+            lines.append("\n<i>To'g'ri javob variantlari test vaqti tugagach ko'rsatiladi.</i>")
+        return header + "\n" + "\n".join(lines)
+
+    report = await build_report()
+    if report is None:
+        await callback.answer("Natija topilmadi yoki sizga tegishli emas.", show_alert=True)
+        return
+    if report == 'not_finished':
+        await callback.answer("Bu test hali yakunlanmagan.", show_alert=True)
+        return
+
+    # Telegram message limit is 4096 chars — send the report in chunks, split on lines.
+    chunk, chunks = "", []
+    for line in report.split("\n"):
+        if len(chunk) + len(line) + 1 > 3800:
+            chunks.append(chunk)
+            chunk = line
+        else:
+            chunk = f"{chunk}\n{line}" if chunk else line
+    if chunk:
+        chunks.append(chunk)
+    for part in chunks:
+        await callback.message.answer(part, parse_mode="HTML")
+    await callback.answer()
+
 
 @router.callback_query(F.data.startswith("del_prof_"))
 async def process_delete_profile(callback: CallbackQuery):
