@@ -85,6 +85,11 @@ class TestViewSet(viewsets.ModelViewSet):
         start_dt = make_aware(datetime.combine(to_date, start_t))
         end_dt = make_aware(datetime.combine(to_date, end_t))
 
+        from django.utils import timezone as dj_tz
+        from apps.exams.models import ExamSession
+        is_past = to_date < dj_tz.localdate()
+        test_ids = [t.id for t in undated]
+
         with transaction.atomic():
             count = 0
             for test in undated:
@@ -92,12 +97,27 @@ class TestViewSet(viewsets.ModelViewSet):
                 test.end_datetime = end_dt
                 test.save(update_fields=['start_datetime', 'end_datetime'])
                 count += 1
-            synced = sync_approved_participants_to_upcoming_date(to_date)
+
+            if is_past:
+                # Historical olympiad: attach ONLY the people who actually took
+                # one of these tests. New registrants stay in the waiting pool
+                # for the next (future) olympiad.
+                taker_ids = list(
+                    ExamSession.objects
+                    .filter(test_id__in=test_ids)
+                    .values_list('participant_id', flat=True)
+                    .distinct()
+                )
+                synced = Participant.objects.filter(id__in=taker_ids).update(target_test_date=to_date)
+            else:
+                # Upcoming olympiad: pull all orphaned approved participants in.
+                synced = sync_approved_participants_to_upcoming_date(to_date)
 
         return Response({
             'updated_tests': count,
             'updated_participants': synced,
             'to_date': to_date_str,
+            'is_past': is_past,
         })
 
     @action(detail=False, methods=['post'], url_path='reschedule')

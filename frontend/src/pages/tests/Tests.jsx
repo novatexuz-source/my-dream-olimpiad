@@ -8,21 +8,21 @@ import {
 import { authFetch } from '../../config'
 import './Tests.css'
 
-const SUBJECTS_ORDER = ['Matematika', 'Ingliz-tili', 'Rus-tili']
+const SUBJECTS_ORDER = ['Matematika', 'Ingliz tili', 'Rus tili']
 const SUBJECT_LABELS = {
   'Matematika': 'Matematika',
-  'Ingliz-tili': 'Ingliz tili',
-  'Rus-tili': 'Rus tili',
+  'Ingliz tili': 'Ingliz tili',
+  'Rus tili': 'Rus tili',
 }
 const SUBJECT_ICONS = {
   'Matematika': '🔢',
-  'Ingliz-tili': '🇬🇧',
-  'Rus-tili': '🇷🇺',
+  'Ingliz tili': '🇬🇧',
+  'Rus tili': '🇷🇺',
 }
 const SUBJECT_COLORS = {
   'Matematika': 'subject-math',
-  'Ingliz-tili': 'subject-english',
-  'Rus-tili': 'subject-russian',
+  'Ingliz tili': 'subject-english',
+  'Rus tili': 'subject-russian',
 }
 const GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 
@@ -553,8 +553,9 @@ export default function Tests() {
             </div>
             <h3 className="reschedule-modal-title">Testlarga sana belgilash</h3>
             <p className="reschedule-modal-hint">
-              {undatedTests.length} ta sanasiz test tanlangan sanaga biriktiriladi va barcha tasdiqlangan
-              ishtirokchilar shu olimpiadaga avtomatik ulanadi.
+              {undatedTests.length} ta sanasiz test tanlangan sanaga biriktiriladi.
+              O'tgan sana bo'lsa — faqat shu testlarni topshirganlar shu olimpiadaga ulanadi;
+              yangi yozilganlar keyingi olimpiadani kutib turadi.
             </p>
 
             <div className="reschedule-input-group">
