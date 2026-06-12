@@ -42,4 +42,42 @@ def _ensure_telegram_webhook():
         print(f"[TG] setWebhook failed: {exc}")
 
 
+def _ensure_admin():
+    """Create/rotate the admin account from env vars on every server start.
+
+    The old approach was a one-time migration — once it had run (e.g. before
+    the env vars were added), changing ADMIN_USERNAME/ADMIN_PASSWORD on Render
+    had no effect. Syncing at startup makes the env vars the source of truth.
+    Dashes/spaces are stripped so '+998-91-...' matches the login form, which
+    submits the phone without separators.
+    """
+    username = (os.getenv('ADMIN_USERNAME') or '').replace('-', '').replace(' ', '')
+    password = os.getenv('ADMIN_PASSWORD') or ''
+    if not username or not password:
+        return
+    try:
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        user, created = User.objects.get_or_create(username=username)
+        needs_update = (
+            created
+            or not user.check_password(password)
+            or not user.is_superuser
+            or not user.is_active
+        )
+        if needs_update:
+            user.set_password(password)
+            user.is_staff = True
+            user.is_superuser = True
+            user.is_active = True
+            if hasattr(user, 'role'):
+                user.role = 'super_admin'
+            user.save()
+            print(f"[ADMIN] account ensured for {username}")
+    except Exception as exc:  # never block server startup over this
+        print(f"[ADMIN] ensure failed: {exc}")
+
+
 _ensure_telegram_webhook()
+_ensure_admin()
