@@ -954,7 +954,7 @@
 
 .modal-split-layout {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 1fr;
   gap: 32px;
   margin-bottom: 32px;
 }

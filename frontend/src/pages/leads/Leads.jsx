@@ -3,7 +3,6 @@ import {
   Search,
   Copy,
   Check,
-  Eye,
   RefreshCw,
   X,
   AlertTriangle,
@@ -13,7 +12,6 @@ import {
   Tag,
   BookOpen,
   GraduationCap,
-  FileText,
   ArrowUpDown,
   Filter,
   Users,
@@ -76,7 +74,6 @@ export default function Leads({ defaultStatus = 'all' }) {
 
   const [copiedId, setCopiedId] = useState(null)
 
-  const [zoomImage, setZoomImage] = useState(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -484,32 +481,6 @@ export default function Leads({ defaultStatus = 'all' }) {
                 </div>
               </div>
 
-              <div className="modal-doc-column">
-                <h3 className="section-title">Hujjat (Pasport / Guvohnoma)</h3>
-                {selected.passport_or_birth_cert ? (
-                  <div className="doc-preview-container" onClick={() => setZoomImage(selected.passport_or_birth_cert)}>
-                    <img
-                      src={selected.passport_or_birth_cert}
-                      alt="Passport yoki guvohnoma"
-                      className="doc-thumbnail"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.style.display = 'none';
-                        e.target.parentNode.classList.add('image-error-fallback');
-                      }}
-                    />
-                    <div className="doc-preview-overlay">
-                      <Eye size={24} />
-                      <span>Kattalashtirish</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="doc-empty-state">
-                    <FileText size={48} className="doc-icon" />
-                    <span>Hujjat yuklanmagan</span>
-                  </div>
-                )}
-              </div>
             </div>
 
             {selected.verification_status === 'pending' && (
@@ -586,13 +557,6 @@ export default function Leads({ defaultStatus = 'all' }) {
         </div>
       )}
 
-      {/* Image Zoom Modal */}
-      {zoomImage && (
-        <div className="zoom-modal-overlay" onClick={() => setZoomImage(null)}>
-          <button className="zoom-modal-close" onClick={() => setZoomImage(null)}><X size={32} /></button>
-          <img src={zoomImage} alt="Document Zoomed" className="zoom-image" onClick={e => e.stopPropagation()} />
-        </div>
-      )}
     </div>
   )
 }
