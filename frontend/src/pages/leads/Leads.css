@@ -474,7 +474,9 @@
   background: #ffffff;
   border-radius: 24px;
   border: 1px solid #e2e8f0;
-  overflow: hidden;
+  /* The table is wide (11 columns) — scroll it inside the card on narrow
+     viewports instead of stretching the whole page. */
+  overflow-x: auto;
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.02),
     0 12px 32px -12px rgba(15, 23, 42, 0.06);
@@ -482,6 +484,7 @@
 
 .leads-table {
   width: 100%;
+  min-width: 1150px;
   border-collapse: separate;
   border-spacing: 0;
 }

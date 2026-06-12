@@ -90,6 +90,9 @@
 /* Main Wrapper */
 .main-wrapper {
   flex: 1;
+  /* min-width:0 lets a wide child (e.g. a data table) shrink/scroll inside
+     instead of stretching the whole page and creating a horizontal scrollbar. */
+  min-width: 0;
   margin-left: 260px;
   display: flex;
   flex-direction: column;
@@ -205,6 +208,7 @@
 /* Content Area */
 .admin-content {
   flex: 1;
+  min-width: 0;
   padding: 32px;
 }
 
