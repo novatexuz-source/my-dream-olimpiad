@@ -11,15 +11,26 @@ const formatPrefillDate = (dateStr) => {
   return `${d.getDate()}-${months[d.getMonth()]}, ${d.getFullYear()}-yil`
 }
 
+// ISO datetime → local "YYYY-MM-DDTHH:mm:ss" for <input type="datetime-local">
+const toLocalInput = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d)) return ''
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+  return d.toISOString().slice(0, 19)
+}
+
 export default function AddTest() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const prefilledSubject = searchParams.get('subject') || ''
   const prefilledGrade = searchParams.get('grade')
   const prefilledDate = searchParams.get('date') // YYYY-MM-DD
+  const editId = searchParams.get('edit') // existing test id → edit mode
 
   const [subjects, setSubjects] = useState([])
   const [allTests, setAllTests] = useState([])
+  const [loadingTest, setLoadingTest] = useState(!!editId)
 
   // If date passed via URL, default to 10:00 - 12:00 on that day
   const buildInitialDatetime = (dateStr, hour) => {
@@ -80,12 +91,44 @@ export default function AddTest() {
       .catch(err => console.error(err))
   }, [])
 
+  // Edit mode: load the existing test and prefill the form
+  useEffect(() => {
+    if (!editId) return
+    setLoadingTest(true)
+    authFetch(`/tests/list/${editId}/`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        setTestData({
+          subject: data.subject,
+          grade: Number(data.grade),
+          duration_minutes: data.duration_minutes,
+          start_datetime: toLocalInput(data.start_datetime),
+          end_datetime: toLocalInput(data.end_datetime),
+          is_active: data.is_active,
+        })
+        const qs = (data.questions || []).map((q, idx) => ({
+          id: q.id || Date.now() + idx,
+          order_number: q.order_number || idx + 1,
+          question_text: q.question_text || '',
+          option_a: q.option_a || '',
+          option_b: q.option_b || '',
+          option_c: q.option_c || '',
+          option_d: q.option_d || '',
+          correct_answer: q.correct_answer || 'A',
+        }))
+        if (qs.length) setQuestions(qs)
+      })
+      .catch(() => alert("Testni yuklab bo'lmadi"))
+      .finally(() => setLoadingTest(false))
+  }, [editId])
+
   // Returns grades already taken for selected subject + selected date
   const getTakenGrades = () => {
     if (!testData.subject || !testData.start_datetime) return []
     const selectedDate = testData.start_datetime.slice(0, 10) // YYYY-MM-DD
     return allTests
       .filter(t => {
+        if (editId && String(t.id) === String(editId)) return false
         const tDate = t.start_datetime ? t.start_datetime.slice(0, 10) : null
         return String(t.subject) === String(testData.subject) && tDate === selectedDate
       })
@@ -109,6 +152,7 @@ export default function AddTest() {
         const selSubject = name === 'subject' ? value : prev.subject
         const taken = allTests
           .filter(t => {
+            if (editId && String(t.id) === String(editId)) return false
             const tDate = t.start_datetime ? t.start_datetime.slice(0, 10) : null
             return String(t.subject) === String(selSubject) && tDate === selDate
           })
@@ -207,13 +251,16 @@ export default function AddTest() {
     }
 
     try {
-      const res = await authFetch('/tests/list/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      })
+      const res = await authFetch(
+        editId ? `/tests/list/${editId}/` : '/tests/list/',
+        {
+          method: editId ? 'PATCH' : 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        }
+      )
 
       if (res.ok) {
         navigate('/tests')
@@ -239,7 +286,7 @@ export default function AddTest() {
       <div className="add-test-header">
         <button className="btn-back" onClick={() => navigate('/tests')}>← Orqaga</button>
         <div className="title-section">
-          <h1>Yangi test yaratish</h1>
+          <h1>{editId ? 'Testni tahrirlash' : 'Yangi test yaratish'}</h1>
           {hasPrefilled ? (
             <p className="prefilled-hint">
               <span className="prefill-chip">
@@ -256,8 +303,8 @@ export default function AddTest() {
             <p>Test sozlamalari va savollarni kiriting</p>
           )}
         </div>
-        <button className="btn-save" onClick={handleSave} disabled={saving}>
-          {saving ? 'Saqlanmoqda...' : '💾 Testni saqlash'}
+        <button className="btn-save" onClick={handleSave} disabled={saving || loadingTest}>
+          {saving ? 'Saqlanmoqda...' : (editId ? '💾 O\'zgarishlarni saqlash' : '💾 Testni saqlash')}
         </button>
       </div>
 
@@ -305,7 +352,7 @@ export default function AddTest() {
               type="datetime-local"
               name="start_datetime"
               value={testData.start_datetime}
-              min={getNow()}
+              min={editId ? undefined : getNow()}
               step="1"
               onChange={handleTestChange}
             />

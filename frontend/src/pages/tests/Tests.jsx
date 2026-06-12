@@ -693,10 +693,16 @@ export default function Tests() {
                   </div>
                 </div>
               ) : (
-                <button className="btn-delete-modal" onClick={() => setConfirmDeleteId(selectedTest.id)}>
-                  <Trash2 size={16} />
-                  O'chirish
-                </button>
+                <>
+                  <button className="btn-edit-modal" onClick={() => navigate(`/tests/new?edit=${selectedTest.id}`)}>
+                    <Pencil size={16} />
+                    Tahrirlash
+                  </button>
+                  <button className="btn-delete-modal" onClick={() => setConfirmDeleteId(selectedTest.id)}>
+                    <Trash2 size={16} />
+                    O'chirish
+                  </button>
+                </>
               )}
             </div>
           </div>
