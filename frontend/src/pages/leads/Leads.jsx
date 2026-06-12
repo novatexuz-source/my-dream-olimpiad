@@ -20,7 +20,8 @@ import {
   XCircle,
   TrendingUp,
   Headphones,
-  Trash2
+  Trash2,
+  CalendarDays
 } from 'lucide-react'
 import { authFetch } from '../../config'
 import './Leads.css'
@@ -56,6 +57,23 @@ const getAvatarGradient = (name) => {
   if (!name) return AVATAR_GRADIENTS[0]
   const code = name.charCodeAt(0) || 0
   return AVATAR_GRADIENTS[code % AVATAR_GRADIENTS.length]
+}
+
+// Local calendar-date key (YYYY-MM-DD) for grouping by registration day.
+const leadDateKey = (iso) => {
+  if (!iso) return 'no-date'
+  const d = new Date(iso)
+  if (isNaN(d)) return 'no-date'
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const formatLeadDivider = (key) => {
+  if (key === 'no-date') return 'Sana belgilanmagan'
+  const [y, m, d] = key.split('-')
+  return `${d}.${m}.${y}`
 }
 
 export default function Leads({ defaultStatus = 'all' }) {
@@ -143,6 +161,18 @@ export default function Leads({ defaultStatus = 'all' }) {
   const operatorList = Object.entries(operatorStats.byId)
     .map(([id, v]) => ({ id, ...v }))
     .sort((a, b) => b.count - a.count)
+
+  // Group the (already sorted/filtered) leads by registration day, preserving order.
+  const leadDateGroups = (() => {
+    const order = []
+    const map = {}
+    filtered.forEach(p => {
+      const key = leadDateKey(p.registered_at)
+      if (!map[key]) { map[key] = []; order.push(key) }
+      map[key].push(p)
+    })
+    return order.map(key => ({ key, rows: map[key] }))
+  })()
 
   const handleApprove = async (id) => {
     setActionLoading(true)
@@ -377,15 +407,31 @@ export default function Leads({ defaultStatus = 'all' }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p, i) => {
-                const s = STATUS_MAP[p.verification_status] || STATUS_MAP.pending
-                const subjectsCount = p.subject ? p.subject.split(',').length : 1
-                const amount = 190000 + (subjectsCount - 1) * 90000
-                const isCopied = copiedId === p.id
+              {(() => {
+                let n = 0
+                return leadDateGroups.map((g) => (
+                  <React.Fragment key={g.key}>
+                    <tr className="lead-date-divider-row">
+                      <td colSpan={11}>
+                        <div className="lead-date-divider">
+                          <CalendarDays size={15} />
+                          <span className="lead-date-divider-label">{formatLeadDivider(g.key)}</span>
+                          <span className="lead-date-divider-line" />
+                          <span className="lead-date-divider-count">{g.rows.length} ta</span>
+                        </div>
+                      </td>
+                    </tr>
+                    {g.rows.map((p) => {
+                      n++
+                      const idx = n
+                      const s = STATUS_MAP[p.verification_status] || STATUS_MAP.pending
+                      const subjectsCount = p.subject ? p.subject.split(',').length : 1
+                      const amount = 190000 + (subjectsCount - 1) * 90000
+                      const isCopied = copiedId === p.id
 
-                return (
-                  <tr key={p.id} className="table-row" onClick={() => setSelected(p)}>
-                    <td className="td-num">{i + 1}</td>
+                      return (
+                        <tr key={p.id} className="table-row" onClick={() => setSelected(p)}>
+                          <td className="td-num">{idx}</td>
                     <td className="td-name">
                       <div
                         className="name-avatar-gradient"
@@ -476,8 +522,11 @@ export default function Leads({ defaultStatus = 'all' }) {
                       </button>
                     </td>
                   </tr>
-                )
-              })}
+                        )
+                    })}
+                  </React.Fragment>
+                ))
+              })()}
             </tbody>
           </table>
         )}
