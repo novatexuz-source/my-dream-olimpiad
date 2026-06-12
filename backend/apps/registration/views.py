@@ -152,6 +152,23 @@ class ParticipantViewSet(viewsets.ModelViewSet):
 
         return Response({'status': 'rejected'})
 
+    @action(detail=False, methods=['post'], url_path='reset-calls')
+    def reset_calls(self, request):
+        """Reset the calling campaign: move every approved lead back to 'new' and
+        re-target them at the upcoming olympiad date, so a fresh round of calls
+        can start from zero after a new test date is set.
+        """
+        next_date = get_next_olympiad_date()
+        updated = Participant.objects.filter(verification_status='approved').update(
+            call_status='new',
+            target_test_date=next_date,
+        )
+        return Response({
+            'status': 'reset',
+            'updated': updated,
+            'target_test_date': next_date,
+        })
+
     @action(detail=True, methods=['post'], url_path='call-status')
     def update_call_status(self, request, pk=None):
         participant = self.get_object()

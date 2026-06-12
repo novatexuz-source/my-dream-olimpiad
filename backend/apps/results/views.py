@@ -2,15 +2,53 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Prefetch
+from django.utils import timezone
+from collections import OrderedDict
 from apps.results.models import Result
 from apps.registration.models import Participant
 from apps.exams.models import ExamSession
 
 
+def _session_date(session):
+    """Local calendar date the exam was taken (used for grouping)."""
+    dt = session.finished_at or session.started_at
+    return timezone.localtime(dt).date() if dt else None
+
+
 class ResultsListView(APIView):
     permission_classes = [IsAuthenticated]
 
+    # Only results from the most recent N test days are kept; older ones are purged.
+    KEEP_DATES = 3
+
+    def _cleanup_old_dates(self):
+        """Keep only the most recent KEEP_DATES test days; delete older sessions.
+
+        Runs on the full (unfiltered) set so search/subject/grade filters never
+        influence what gets deleted. Cascades remove related answers and results.
+        """
+        completed = ExamSession.objects.filter(status='completed', finished_at__isnull=False)
+        all_dates = sorted(
+            {timezone.localtime(dt).date() for dt in completed.values_list('finished_at', flat=True)},
+            reverse=True,
+        )
+        if len(all_dates) <= self.KEEP_DATES:
+            return
+        old_dates = set(all_dates[self.KEEP_DATES:])
+        old_ids = [
+            s.id for s in completed.only('id', 'finished_at')
+            if timezone.localtime(s.finished_at).date() in old_dates
+        ]
+        if old_ids:
+            ExamSession.objects.filter(id__in=old_ids).delete()
+
     def get(self, request):
+        # Auto-purge results older than the 3 most recent test days.
+        try:
+            self._cleanup_old_dates()
+        except Exception:
+            pass
+
         sessions = ExamSession.objects.filter(
             status='completed'
         ).select_related(
@@ -34,24 +72,36 @@ class ResultsListView(APIView):
             .values_list('session_id', 'certificate_sent')
         )
 
+        # Group sessions by test day (already ordered by percentage within each day).
+        groups = OrderedDict()
+        for session in sessions:
+            groups.setdefault(_session_date(session), []).append(session)
+
+        # Render dates newest-first; sessions with no date (edge case) go last.
+        ordered_dates = sorted([d for d in groups if d is not None], reverse=True)
+        if None in groups:
+            ordered_dates.append(None)
+
         data = []
-        for idx, session in enumerate(sessions, start=1):
-            data.append({
-                'id': str(session.id),
-                'rank': idx,
-                'full_name': session.participant.full_name,
-                'phone': session.participant.phone,
-                'grade': session.test.grade,
-                'subject': session.test.subject.name,
-                'test_title': session.test.title,
-                'correct_count': session.correct_count,
-                'wrong_count': session.wrong_count,
-                'total_questions': session.total_questions,
-                'percentage': round(session.percentage, 1),
-                'score': session.score,
-                'finished_at': session.finished_at,
-                'certificate_sent': cert_map.get(session.id, False),
-            })
+        for d in ordered_dates:
+            for idx, session in enumerate(groups[d], start=1):
+                data.append({
+                    'id': str(session.id),
+                    'rank': idx,  # rank is per-day
+                    'full_name': session.participant.full_name,
+                    'phone': session.participant.phone,
+                    'grade': session.test.grade,
+                    'subject': session.test.subject.name,
+                    'test_title': session.test.title,
+                    'correct_count': session.correct_count,
+                    'wrong_count': session.wrong_count,
+                    'total_questions': session.total_questions,
+                    'percentage': round(session.percentage, 1),
+                    'score': session.score,
+                    'finished_at': session.finished_at,
+                    'test_date': d.isoformat() if d else None,
+                    'certificate_sent': cert_map.get(session.id, False),
+                })
 
         return Response({
             'count': len(data),

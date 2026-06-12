@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Search, RefreshCw, Trophy, ChevronUp, ChevronDown } from 'lucide-react'
+import { Search, RefreshCw, Trophy, ChevronUp, ChevronDown, CalendarDays } from 'lucide-react'
 import { API_BASE } from '../../config'
 import './Results.css'
+
+const formatDivider = (dateStr) => {
+  if (!dateStr) return 'Sana belgilanmagan'
+  const [y, m, d] = dateStr.split('-')
+  return `${d}.${m}.${y}`
+}
 
 const SUBJECT_OPTIONS = ['Barcha fanlar', 'Matematika', 'Ingliz tili', 'Rus tili']
 const GRADE_OPTIONS = ['Barcha sinflar', ...Array.from({ length: 11 }, (_, i) => `${i + 1}`)]
@@ -74,7 +80,7 @@ export default function Results() {
     }
   }
 
-  const sorted = [...results].sort((a, b) => {
+  const sortRows = (rows) => [...rows].sort((a, b) => {
     // Issued-certificate rows always sink to the bottom
     if (!!a.certificate_sent !== !!b.certificate_sent) return a.certificate_sent ? 1 : -1
     let valA = a[sortKey]
@@ -85,6 +91,20 @@ export default function Results() {
     if (valA > valB) return sortDir === 'asc' ? 1 : -1
     return 0
   })
+
+  // Group results by test day (server returns them newest-day first); sort within each day.
+  const dateOrder = []
+  const dateMap = {}
+  results.forEach(r => {
+    const key = r.test_date || 'no-date'
+    if (!dateMap[key]) { dateMap[key] = []; dateOrder.push(key) }
+    dateMap[key].push(r)
+  })
+  const dateGroups = dateOrder.map(key => ({
+    key,
+    date: key === 'no-date' ? null : key,
+    rows: sortRows(dateMap[key]),
+  }))
 
   const SortIcon = ({ col }) => {
     if (sortKey !== col) return <span className="sort-icon muted">↕</span>
@@ -161,7 +181,7 @@ export default function Results() {
             <div className="spinner" />
             <p>Natijalar yuklanmoqda...</p>
           </div>
-        ) : sorted.length === 0 ? (
+        ) : results.length === 0 ? (
           <div className="results-empty">
             <Trophy size={48} color="#d1d5db" />
             <p>Hech qanday natija topilmadi</p>
@@ -199,7 +219,19 @@ export default function Results() {
               </tr>
             </thead>
             <tbody>
-              {sorted.map((r) => (
+              {dateGroups.map((g) => (
+                <React.Fragment key={g.key}>
+                  <tr className="date-divider-row">
+                    <td colSpan={10}>
+                      <div className="date-divider">
+                        <CalendarDays size={15} />
+                        <span className="date-divider-label">{formatDivider(g.date)}</span>
+                        <span className="date-divider-line" />
+                        <span className="date-divider-count">{g.rows.length} ta natija</span>
+                      </div>
+                    </td>
+                  </tr>
+                  {g.rows.map((r) => (
                 <tr
                   key={r.id}
                   className={[
@@ -261,6 +293,8 @@ export default function Results() {
                     </button>
                   </td>
                 </tr>
+                  ))}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

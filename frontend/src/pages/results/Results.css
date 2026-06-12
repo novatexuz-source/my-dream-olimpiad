@@ -252,6 +252,31 @@
 .results-table tbody tr.top-row.rank-2 { background: #f8fafc; }
 .results-table tbody tr.top-row.rank-3 { background: #fff7f0; }
 
+/* Date divider row */
+.results-table tbody tr.date-divider-row { background: transparent; border-bottom: none; }
+.results-table tbody tr.date-divider-row:hover { background: transparent; }
+.results-table tbody tr.date-divider-row td { padding: 18px 16px 10px; }
+.date-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #1e3a6e;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+.date-divider svg { color: #2b4d8f; flex-shrink: 0; }
+.date-divider-label { letter-spacing: 0.5px; white-space: nowrap; }
+.date-divider-line { flex: 1; height: 2px; background: repeating-linear-gradient(90deg, #cbd5e1 0 8px, transparent 8px 14px); border-radius: 2px; }
+.date-divider-count {
+  background: #eef2ff;
+  color: #4338ca;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .results-table td {
   padding: 13px 16px;
   vertical-align: middle;

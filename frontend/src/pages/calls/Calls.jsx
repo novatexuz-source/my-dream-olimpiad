@@ -3,7 +3,7 @@ import {
   Phone, PhoneOff, PhoneIncoming, PhoneForwarded,
   Search, RefreshCw, X, GraduationCap, BookOpen,
   ChevronDown, ChevronUp, Copy, Check, Users, MessageCircle,
-  CalendarDays, Hourglass, Sparkles, Trash2, AlertTriangle
+  CalendarDays, Hourglass, Sparkles, Trash2, AlertTriangle, RotateCcw
 } from 'lucide-react'
 import './Calls.css'
 import { authFetch } from '../../config'
@@ -71,6 +71,8 @@ export default function Calls() {
   const [expandedPhone, setExpandedPhone] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null) // { ids: [], names: [], phone, mode: 'one'|'group' }
   const [deleting, setDeleting] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [resetting, setResetting] = useState(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -126,6 +128,25 @@ export default function Calls() {
       console.error(e)
     } finally {
       setUpdatingId(null)
+    }
+  }
+
+  const resetCampaign = async () => {
+    setResetting(true)
+    try {
+      const res = await authFetch('/registration/participants/reset-calls/', { method: 'POST' })
+      if (res.ok) {
+        await fetchData()
+        setShowResetConfirm(false)
+        setActiveTab('new')
+      } else {
+        alert("Qayta tiklashda xatolik yuz berdi")
+      }
+    } catch (e) {
+      console.error(e)
+      alert("Qayta tiklashda xatolik yuz berdi")
+    } finally {
+      setResetting(false)
     }
   }
 
@@ -296,10 +317,16 @@ export default function Calls() {
               </p>
             </div>
           </div>
-          <button className={`refresh-btn ${loading ? 'spinning' : ''}`} onClick={fetchData} disabled={loading}>
-            <RefreshCw size={16} />
-            <span>Yangilash</span>
-          </button>
+          <div className="calls-header-actions">
+            <button className="reset-campaign-btn" onClick={() => setShowResetConfirm(true)} disabled={loading}>
+              <RotateCcw size={16} />
+              <span>Boshiga qaytarish</span>
+            </button>
+            <button className={`refresh-btn ${loading ? 'spinning' : ''}`} onClick={fetchData} disabled={loading}>
+              <RefreshCw size={16} />
+              <span>Yangilash</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -441,6 +468,46 @@ export default function Calls() {
                   <>
                     <Trash2 size={15} />
                     Ha, o'chirish
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reset Campaign Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="delete-modal-overlay" onClick={() => !resetting && setShowResetConfirm(false)}>
+          <div className="delete-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="delete-modal-icon reset-icon">
+              <RotateCcw size={28} />
+            </div>
+            <h3 className="delete-modal-title">Qo'ng'iroqlarni boshiga qaytarish</h3>
+            <p className="delete-modal-text">
+              Barcha <strong>{participants.length}</strong> ta tasdiqlangan ishtirokchi qaytadan
+              <strong> "Yangi"</strong> holatiga o'tadi va yaqinlashayotgan olimpiada sanasiga biriktiriladi.
+              Yangi test sanasi belgilangach, qo'ng'iroqlarni 0 dan boshlash uchun shu tugmani bosing.
+            </p>
+            <div className="delete-modal-actions">
+              <button
+                className="btn-cancel-delete"
+                onClick={() => setShowResetConfirm(false)}
+                disabled={resetting}
+              >
+                Bekor qilish
+              </button>
+              <button
+                className="btn-confirm-reset"
+                onClick={resetCampaign}
+                disabled={resetting}
+              >
+                {resetting ? (
+                  <>Qaytarilmoqda...</>
+                ) : (
+                  <>
+                    <RotateCcw size={15} />
+                    Ha, boshiga qaytarish
                   </>
                 )}
               </button>
@@ -695,16 +762,6 @@ export default function Calls() {
                                 >
                                   <X size={13} />
                                   Rad etildi
-                                </button>
-                              )}
-                              {memberStatus !== 'new' && (
-                                <button
-                                  className="action-btn btn-reset"
-                                  onClick={() => updateCallStatus(m.id, 'new')}
-                                  disabled={isMemberUpdating}
-                                >
-                                  <Phone size={13} />
-                                  Qaytarish
                                 </button>
                               )}
                               <button

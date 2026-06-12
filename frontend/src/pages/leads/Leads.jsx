@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   XCircle,
   TrendingUp,
-  Headphones
+  Headphones,
+  Trash2
 } from 'lucide-react'
 import { authFetch } from '../../config'
 import './Leads.css'
@@ -75,6 +76,9 @@ export default function Leads({ defaultStatus = 'all' }) {
   const [rejectReason, setRejectReason] = useState('')
 
   const [copiedId, setCopiedId] = useState(null)
+
+  const [deleteTarget, setDeleteTarget] = useState(null) // participant object
+  const [deleting, setDeleting] = useState(false)
 
 
   const fetchData = useCallback(async () => {
@@ -182,6 +186,29 @@ export default function Leads({ defaultStatus = 'all' }) {
       console.error(e)
     } finally {
       setActionLoading(false)
+    }
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await authFetch(`/registration/participants/${deleteTarget.id}/`, { method: 'DELETE' })
+      if (res.ok || res.status === 404) {
+        setParticipants(prev => prev.filter(p => p.id !== deleteTarget.id))
+        setStats(s => ({
+          total: Math.max(0, s.total - 1),
+          approved: s.approved - (deleteTarget.verification_status === 'approved' ? 1 : 0),
+          pending: s.pending - (deleteTarget.verification_status === 'pending' ? 1 : 0),
+          rejected: s.rejected - (deleteTarget.verification_status === 'rejected' ? 1 : 0),
+        }))
+        setDeleteTarget(null)
+        setSelected(null)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -440,6 +467,13 @@ export default function Leads({ defaultStatus = 'all' }) {
                           Rad etilgan
                         </span>
                       )}
+                      <button
+                        className="btn-delete-lead-row"
+                        onClick={() => setDeleteTarget(p)}
+                        title="Lidni butunlay o'chirish"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </td>
                   </tr>
                 )
@@ -548,6 +582,47 @@ export default function Leads({ defaultStatus = 'all' }) {
                 </button>
               </div>
             )}
+
+            <button
+              className="btn-delete-lead-modal"
+              onClick={() => setDeleteTarget(selected)}
+            >
+              <Trash2 size={16} />
+              Lidni butunlay o'chirish
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Lead Confirmation */}
+      {deleteTarget && (
+        <div className="rejection-dialog-overlay" onClick={() => !deleting && setDeleteTarget(null)}>
+          <div className="delete-lead-card animate-scale-up" onClick={e => e.stopPropagation()}>
+            <div className="delete-lead-icon">
+              <Trash2 size={26} />
+            </div>
+            <h3>Lidni butunlay o'chirish</h3>
+            <p>
+              <strong>{deleteTarget.full_name}</strong> va unga oid barcha ma'lumotlar
+              (to'lovlar, test natijalari, qo'ng'iroq holati) bazadan butunlay o'chiriladi.
+              Bu amalni qaytarib bo'lmaydi.
+            </p>
+            <div className="delete-lead-actions">
+              <button
+                className="btn-dialog-cancel"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+              >
+                Bekor qilish
+              </button>
+              <button
+                className="btn-delete-confirm"
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+              >
+                {deleting ? "O'chirilmoqda..." : "Ha, o'chirish"}
+              </button>
+            </div>
           </div>
         </div>
       )}

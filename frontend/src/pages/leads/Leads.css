@@ -1421,6 +1421,106 @@
   cursor: not-allowed;
 }
 
+/* Delete Lead */
+.btn-delete-lead-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  padding: 7px;
+  background: #fff;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  vertical-align: middle;
+}
+.btn-delete-lead-row:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
+.btn-delete-lead-modal {
+  width: 100%;
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: #fff;
+  border: 1.5px solid #fecaca;
+  color: #dc2626;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-delete-lead-modal:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+}
+
+.delete-lead-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 28px 26px;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.4);
+}
+.delete-lead-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  box-shadow: 0 8px 18px -6px rgba(220, 38, 38, 0.3);
+}
+.delete-lead-card h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 10px;
+}
+.delete-lead-card p {
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.55;
+  margin: 0 0 22px;
+}
+.delete-lead-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.btn-delete-confirm {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #ffffff;
+  border: none;
+  padding: 13px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 8px 18px -6px rgba(220, 38, 38, 0.5);
+}
+.btn-delete-confirm:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px -6px rgba(220, 38, 38, 0.6);
+}
+.btn-delete-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+
 /* Zoom Modal */
 .zoom-modal-overlay {
   position: fixed;
