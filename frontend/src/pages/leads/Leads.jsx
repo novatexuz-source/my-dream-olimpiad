@@ -18,7 +18,8 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  TrendingUp
+  TrendingUp,
+  Headphones
 } from 'lucide-react'
 import { authFetch } from '../../config'
 import './Leads.css'
@@ -64,6 +65,7 @@ export default function Leads({ defaultStatus = 'all' }) {
   const [filterStatus, setFilterStatus] = useState(defaultStatus)
   const [filterSubject, setFilterSubject] = useState('all')
   const [filterGrade, setFilterGrade] = useState('all')
+  const [filterOperator, setFilterOperator] = useState('all')
   const [sortBy, setSortBy] = useState('newest')
   const [selected, setSelected] = useState(null)
   const [stats, setStats] = useState({ total: 0, approved: 0, pending: 0, rejected: 0 })
@@ -110,6 +112,9 @@ export default function Leads({ defaultStatus = 'all' }) {
       if (filterStatus !== 'all' && p.verification_status !== filterStatus) return false
       if (filterSubject !== 'all' && !p.subject?.includes(filterSubject)) return false
       if (filterGrade !== 'all' && String(p.grade) !== String(filterGrade)) return false
+      if (filterOperator === 'self') { if (!p.self_referral) return false }
+      else if (filterOperator === 'none') { if (p.operator || p.self_referral) return false }
+      else if (filterOperator !== 'all') { if (String(p.operator) !== String(filterOperator)) return false }
       return true
     })
     .sort((a, b) => {
@@ -121,6 +126,19 @@ export default function Leads({ defaultStatus = 'all' }) {
 
   const allSubjects = [...new Set(participants.flatMap(p => p.subject?.split(', ') || []))]
   const allGrades = [...new Set(participants.map(p => p.grade).filter(Boolean))].sort((a, b) => Number(a) - Number(b))
+
+  // Build operator stats: how many leads each operator brought (+ self-referral / no-operator buckets)
+  const operatorStats = participants.reduce((acc, p) => {
+    if (p.self_referral) acc.self += 1
+    else if (p.operator) {
+      if (!acc.byId[p.operator]) acc.byId[p.operator] = { name: p.operator_name || 'Operator', count: 0 }
+      acc.byId[p.operator].count += 1
+    } else acc.none += 1
+    return acc
+  }, { byId: {}, self: 0, none: 0 })
+  const operatorList = Object.entries(operatorStats.byId)
+    .map(([id, v]) => ({ id, ...v }))
+    .sort((a, b) => b.count - a.count)
 
   const handleApprove = async (id) => {
     setActionLoading(true)
@@ -189,11 +207,12 @@ export default function Leads({ defaultStatus = 'all' }) {
     setSearch('')
     setFilterSubject('all')
     setFilterGrade('all')
+    setFilterOperator('all')
     setSortBy('newest')
     setFilterStatus(defaultStatus)
   }
 
-  const hasActiveFilters = search || filterSubject !== 'all' || filterGrade !== 'all' || filterStatus !== defaultStatus
+  const hasActiveFilters = search || filterSubject !== 'all' || filterGrade !== 'all' || filterOperator !== 'all' || filterStatus !== defaultStatus
 
   const pageTitle = defaultStatus === 'rejected' ? 'Rad etilgan arizalar' :
                     defaultStatus === 'approved' ? 'Tasdiqlangan arizalar' :
@@ -260,6 +279,18 @@ export default function Leads({ defaultStatus = 'all' }) {
           </div>
 
           <div className="select-wrapper">
+            <Headphones size={14} className="select-icon" />
+            <select value={filterOperator} onChange={e => setFilterOperator(e.target.value)}>
+              <option value="all">Barcha operatorlar</option>
+              {operatorList.map(op => (
+                <option key={op.id} value={op.id}>{op.name} ({op.count})</option>
+              ))}
+              {operatorStats.self > 0 && <option value="self">O'zim eshitdim ({operatorStats.self})</option>}
+              {operatorStats.none > 0 && <option value="none">Operatorsiz ({operatorStats.none})</option>}
+            </select>
+          </div>
+
+          <div className="select-wrapper">
             <ArrowUpDown size={14} className="select-icon" />
             <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
               <option value="newest">Yangi → Eski</option>
@@ -312,6 +343,7 @@ export default function Leads({ defaultStatus = 'all' }) {
                 <th>Fanlar</th>
                 <th style={{textAlign:'center'}}>To'lov turi</th>
                 <th>To'lov Summasi</th>
+                <th>Operator</th>
                 <th>Status</th>
                 <th>Ro'yxatdan o'tgan sana</th>
                 <th style={{textAlign:'right'}}>Amallar</th>
@@ -356,6 +388,15 @@ export default function Leads({ defaultStatus = 'all' }) {
                     </td>
                     <td className="td-amount">
                       {Number(amount).toLocaleString('ru-RU')} so'm
+                    </td>
+                    <td className="td-operator">
+                      {p.self_referral ? (
+                        <span className="operator-tag operator-self">O'zim eshitdim</span>
+                      ) : p.operator_name ? (
+                        <span className="operator-tag">{p.operator_name}</span>
+                      ) : (
+                        <span className="operator-tag operator-none">—</span>
+                      )}
                     </td>
                     <td>
                       <span className={`status-pill ${s.color}`}>
@@ -451,6 +492,12 @@ export default function Leads({ defaultStatus = 'all' }) {
                   <div className="detail-row">
                     <span className="detail-label"><CreditCard size={14} /> To'lov turi</span>
                     <strong className="detail-value">{PAYMENT_LABELS[selected.payment_type]}</strong>
+                  </div>
+                  <div className="detail-row">
+                    <span className="detail-label"><Headphones size={14} /> Operator</span>
+                    <strong className="detail-value">
+                      {selected.self_referral ? "O'zim eshitdim" : (selected.operator_name || '—')}
+                    </strong>
                   </div>
                   <div className="detail-row">
                     <span className="detail-label"><Tag size={14} /> Jami Summa</span>

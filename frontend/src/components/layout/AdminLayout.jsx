@@ -76,6 +76,10 @@ export default function AdminLayout() {
             Rad etilgan
           </NavLink>
           <div style={{ margin: '12px 0', borderBottom: '1px solid #f3f4f6' }}></div>
+          <NavLink to="/operators" className="nav-item" onClick={() => setSidebarOpen(false)}>
+            <span className="nav-icon">🎧</span>
+            Operatorlar
+          </NavLink>
           <NavLink to="/calls" className="nav-item" onClick={() => setSidebarOpen(false)}>
             <span className="nav-icon">📞</span>
             Qo'ng'iroqlar

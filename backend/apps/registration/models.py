@@ -1,6 +1,19 @@
 from django.db import models
 import uuid
 
+class Operator(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
 class Participant(models.Model):
     PAYMENT_CHOICES = (
         ('click', 'Click'),
@@ -38,6 +51,18 @@ class Participant(models.Model):
     passport_or_birth_cert = models.URLField(null=True, blank=True, help_text="Supabase Image URL")
     rejection_reason = models.TextField(null=True, blank=True)
     target_test_date = models.DateField(null=True, blank=True, help_text="Qaysi olimpiada kunida qatnashadi")
+    operator = models.ForeignKey(
+        Operator,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='participants',
+        help_text="Mijozni olib kelgan operator",
+    )
+    self_referral = models.BooleanField(
+        default=False,
+        help_text="Mijoz operatorsiz, o'zi eshitib kelgan",
+    )
     registered_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

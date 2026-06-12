@@ -14,6 +14,7 @@ import Calls from './pages/calls/Calls'
 import Profile from './pages/profile/Profile'
 import Results from './pages/results/Results'
 import Monitor from './pages/monitor/Monitor'
+import Operators from './pages/operators/Operators'
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('access_token')
@@ -51,6 +52,7 @@ function App() {
           <Route path="rejected" element={<Leads defaultStatus="rejected" />} />
           <Route path="tests" element={<Tests />} />
           <Route path="tests/new" element={<AddTest />} />
+          <Route path="operators" element={<Operators />} />
           <Route path="calls" element={<Calls />} />
           <Route path="profile" element={<Profile />} />
           <Route path="results" element={<Results />} />

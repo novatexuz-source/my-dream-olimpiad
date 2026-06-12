@@ -27,6 +27,8 @@ export default function Register() {
   }
   const [error, setError] = useState('')
 
+  const [operators, setOperators] = useState([])
+
   const [form, setForm] = useState({
     id: '',
     first_name: '',
@@ -35,6 +37,8 @@ export default function Register() {
     grade: '',
     subjects: [],
     payment_type: '',
+    operator: '',
+    self_referral: false,
   })
 
   // Phone formatter: +998-90-123-45-67
@@ -60,6 +64,14 @@ export default function Register() {
   }
 
   const [errors, setErrors] = useState({})
+
+  // Load the list of active operators for the "who invited you" step
+  useEffect(() => {
+    fetch(`${API_BASE}/registration/operators/public/`)
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setOperators(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [])
 
   // Initialize Telegram WebApp and fetch data
   useEffect(() => {
@@ -88,6 +100,8 @@ export default function Register() {
               grade: data.grade || '',
               subjects: data.subjects || [],
               payment_type: data.payment_type || '',
+              operator: data.operator || '',
+              self_referral: data.self_referral || false,
             })
           })
           .catch(e => console.log('Error fetching data'))
@@ -101,6 +115,8 @@ export default function Register() {
           grade: '',
           subjects: [],
           payment_type: '',
+          operator: '',
+          self_referral: false,
         })
       }
     }
@@ -118,6 +134,7 @@ export default function Register() {
       if (!form.last_name.trim()) newErrors.last_name = 'Familiyangizni kiriting'
       const phoneDigits = form.phone.replace(/\D/g, '')
       if (phoneDigits.length < 12) newErrors.phone = 'Telefon raqamni to\'liq kiriting (+998-XX-XXX-XX-XX)'
+      if (!form.self_referral && !form.operator) newErrors.operator = 'Operatorni tanlang yoki "O\'zim eshitdim"ni belgilang'
     }
     if (step === 2) {
       if (!form.grade) newErrors.grade = 'Sinfingizni tanlang'
@@ -155,6 +172,8 @@ export default function Register() {
           grade: form.grade,
           subject: form.subjects.join(', '),
           payment_type: form.payment_type,
+          operator: form.self_referral ? '' : form.operator,
+          self_referral: form.self_referral,
           telegram_id: telegramId,
         }),
       })
@@ -265,6 +284,35 @@ export default function Register() {
               />
               {errors.phone && <span className="err-msg">{errors.phone}</span>}
             </div>
+
+            <div className="form-group">
+              <label>Sizni kim taklif qildi?</label>
+              <select
+                value={form.operator}
+                disabled={form.self_referral}
+                onChange={e => {
+                  update('operator', e.target.value)
+                  if (e.target.value) setForm(p => ({ ...p, self_referral: false }))
+                }}
+                className={`operator-select ${errors.operator ? 'error' : ''}`}
+              >
+                <option value="">— Operatorni tanlang —</option>
+                {operators.map(op => (
+                  <option key={op.id} value={op.id}>{op.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className={`self-referral-btn ${form.self_referral ? 'selected' : ''}`}
+                onClick={() => {
+                  setForm(p => ({ ...p, self_referral: !p.self_referral, operator: '' }))
+                  setErrors(p => ({ ...p, operator: '' }))
+                }}
+              >
+                <span>{form.self_referral ? '✓ ' : ''}Operator bilan bog'lanmaganman, o'zim eshitdim</span>
+              </button>
+              {errors.operator && <span className="err-msg">{errors.operator}</span>}
+            </div>
           </div>
         )}
 
@@ -361,6 +409,7 @@ export default function Register() {
               <div className="confirm-row"><span>🏫 Sinf</span><strong>{form.grade}-sinf</strong></div>
               <div className="confirm-row"><span>📚 Fan</span><strong>{form.subjects.join(', ')}</strong></div>
               <div className="confirm-row"><span>💳 To'lov</span><strong>{PAYMENT_TYPES.find(p => p.value === form.payment_type)?.label} ({getPrice().toLocaleString('ru-RU')} so'm)</strong></div>
+              <div className="confirm-row"><span>🎧 Operator</span><strong>{form.self_referral ? "O'zim eshitdim" : (operators.find(o => String(o.id) === String(form.operator))?.name || '—')}</strong></div>
             </div>
             {error && <div className="error-banner">{error}</div>}
           </div>

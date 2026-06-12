@@ -9,8 +9,8 @@ from rest_framework.decorators import action, api_view, permission_classes, thro
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from django.conf import settings
-from .models import Participant, Payment
-from .serializers import ParticipantSerializer
+from .models import Participant, Payment, Operator
+from .serializers import ParticipantSerializer, OperatorSerializer
 from decouple import config
 
 logger = logging.getLogger(__name__)
@@ -49,6 +49,20 @@ def get_next_olympiad_date():
     )
     return next_test.start_datetime.date() if next_test and next_test.start_datetime else None
 
+class OperatorViewSet(viewsets.ModelViewSet):
+    queryset = Operator.objects.all()
+    serializer_class = OperatorSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def public_operators(request):
+    """Public list of active operators for the registration form."""
+    operators = Operator.objects.filter(is_active=True).values('id', 'name')
+    return Response(list(operators))
+
+
 class ParticipantViewSet(viewsets.ModelViewSet):
     queryset = Participant.objects.all().order_by('-registered_at')
     serializer_class = ParticipantSerializer
@@ -61,6 +75,13 @@ class ParticipantViewSet(viewsets.ModelViewSet):
             qs = qs.filter(target_test_date__isnull=True)
         elif target_date:
             qs = qs.filter(target_test_date=target_date)
+        operator = self.request.query_params.get('operator')
+        if operator == 'self':
+            qs = qs.filter(self_referral=True)
+        elif operator == 'none':
+            qs = qs.filter(operator__isnull=True, self_referral=False)
+        elif operator:
+            qs = qs.filter(operator_id=operator)
         return qs
     
     def generate_unique_code(self):
@@ -171,11 +192,22 @@ def public_register(request):
         return Response({'error': 'Sinf 1 dan 11 gacha bo\'lishi kerak'}, status=status.HTTP_400_BAD_REQUEST)
 
     phone = data['phone'].replace(' ', '').replace('-', '')
-    
+
+    # Resolve operator: an operator id means "brought by operator", while the
+    # self_referral flag means the customer heard about us on their own.
+    self_referral = bool(data.get('self_referral'))
+    operator = None
+    operator_id = data.get('operator')
+    if operator_id and not self_referral:
+        try:
+            operator = Operator.objects.get(id=operator_id, is_active=True)
+        except (Operator.DoesNotExist, ValueError, ValidationError):
+            operator = None
+
     participant_id = data.get('id')
     participant = None
     created = False
-    
+
     if participant_id:
         try:
             participant = Participant.objects.get(id=participant_id)
@@ -184,11 +216,13 @@ def public_register(request):
             participant.grade = grade
             participant.subject = data['subject']
             participant.payment_type = data['payment_type']
+            participant.operator = operator
+            participant.self_referral = self_referral
             participant.save()
         except (Participant.DoesNotExist, ValueError, ValidationError):
             # Unknown or malformed id — fall through and create a new record.
             participant = None
-            
+
     if not participant:
         participant = Participant.objects.create(
             telegram_id=data.get('telegram_id') or f'web_{phone}',
@@ -197,6 +231,8 @@ def public_register(request):
             grade=grade,
             subject=data['subject'],
             payment_type=data['payment_type'],
+            operator=operator,
+            self_referral=self_referral,
             target_test_date=get_next_olympiad_date(),
         )
         created = True
@@ -314,7 +350,9 @@ def get_by_id(request):
             'phone': participant.phone,
             'grade': participant.grade,
             'subjects': participant.subject.split(', ') if participant.subject else [],
-            'payment_type': participant.payment_type
+            'payment_type': participant.payment_type,
+            'operator': str(participant.operator_id) if participant.operator_id else '',
+            'self_referral': participant.self_referral,
         })
     except (Participant.DoesNotExist, ValueError, ValidationError):
         return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
