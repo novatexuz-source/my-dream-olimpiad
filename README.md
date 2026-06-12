@@ -7,8 +7,8 @@ Olimpiada/test platformasi: ro'yxatdan o'tish, qo'ng'iroqlar, testlar, natijalar
 - **Backend**: Django 5 + DRF + SimpleJWT
 - **Frontend**: React 19 + Vite + Tailwind CSS
 - **Database**: PostgreSQL (Supabase)
-- **Telegram bot**: Aiogram 3 (polling)
-- **Deploy**: Render (backend) + Vercel (frontend) + Fly.io (bot)
+- **Telegram bot**: Aiogram 3 — production'da WEBHOOK rejimi (Render backend ichida), lokalda polling
+- **Deploy**: Render (backend + bot webhook) + Vercel (frontend) + Supabase (database)
 
 ## Project structure
 
@@ -43,9 +43,18 @@ npm run dev
 
 ### Telegram bot (local polling)
 
+⚠️ Lokal polling production webhookni O'CHIRIB yuboradi, shuning uchun maxsus flag talab qilinadi:
+
 ```bash
 cd backend
+set ALLOW_POLLING=1        # Windows (macOS/Linux: export ALLOW_POLLING=1)
 python -m apps.tg_bot.bot.main
+```
+
+Ishlatib bo'lgach production webhookni tiklash uchun brauzerda oching (yoki backendni restart qiling — webhook avtomatik tiklanadi):
+
+```
+https://my-dream-olimpiad.onrender.com/api/tg/set-webhook/<BOT_TOKEN>/
 ```
 
 ## Environment variables
@@ -86,11 +95,13 @@ See `backend/.env.example` and `frontend/.env.example`.
 3. Framework preset: Vite
 4. Add env var: `VITE_API_BASE_URL=https://your-backend.onrender.com/api`
 
-### 4. Telegram bot — Fly.io
-1. `fly launch` in `backend/` (no deploy yet)
-2. `fly secrets set BOT_TOKEN=... DATABASE_URL=... SECRET_KEY=...`
-3. Set `app = "your-bot-name"` and configure Dockerfile to run `python -m apps.tg_bot.bot.main`
-4. `fly deploy`
+### 4. Telegram bot — webhook (alohida server KERAK EMAS)
+Bot Render'dagi backend ichida webhook orqali ishlaydi:
+- Har deploy/restart'da webhook avtomatik o'rnatiladi (`config/wsgi.py` — Render'ning `RENDER_EXTERNAL_URL` env'idan foydalanadi).
+- Qo'lda o'rnatish/tekshirish: brauzerda `https://your-backend.onrender.com/api/tg/set-webhook/<BOT_TOKEN>/` oching.
+- Webhook holatini tekshirish: `https://api.telegram.org/bot<BOT_TOKEN>/getWebhookInfo`
 
-### 5. Keep backend awake — UptimeRobot
-- Add HTTP monitor pinging `https://your-backend.onrender.com/` every 5 min
+### 5. Keep backend awake — UptimeRobot (MAJBURIY!)
+Render free tier 15 daqiqa harakatsizlikdan keyin uxlab qoladi — bot ham, sayt ham sekinlashadi/javob bermaydi.
+- uptimerobot.com da bepul akkaunt oching
+- HTTP monitor: `https://my-dream-olimpiad.onrender.com/` (endi `{"status": "ok"}` qaytaradi), interval: 5 min

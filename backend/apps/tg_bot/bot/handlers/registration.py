@@ -11,7 +11,7 @@ router = Router()
 
 # URL of your registration form (live Vercel frontend)
 import os
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://my-dream-olimpiad-4vdk.vercel.app/register")
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://my-dream-olimpiad.vercel.app/register")
 
 async def show_confirmation(message: Message, state: FSMContext):
     data = await state.get_data()

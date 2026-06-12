@@ -2,6 +2,7 @@ import logging
 import secrets
 import string
 import requests
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
@@ -184,7 +185,8 @@ def public_register(request):
             participant.subject = data['subject']
             participant.payment_type = data['payment_type']
             participant.save()
-        except Participant.DoesNotExist:
+        except (Participant.DoesNotExist, ValueError, ValidationError):
+            # Unknown or malformed id — fall through and create a new record.
             participant = None
             
     if not participant:
@@ -242,7 +244,7 @@ def public_register(request):
             f"<i>Ma'lumotlaringizda xato bo'lsa, quyidagi tugma orqali tahrirlashingiz mumkin.</i>"
         )
         
-        WEBAPP_URL = config('WEBAPP_URL', default='https://my-dream-olimpiad-4vdk.vercel.app/register')
+        WEBAPP_URL = config('WEBAPP_URL', default='https://my-dream-olimpiad.vercel.app/register')
         reply_markup = {
             "inline_keyboard": [
                 [{"text": "✏️ Tahrirlash", "web_app": {"url": f"{WEBAPP_URL}?id={participant.id}"}}],
@@ -297,7 +299,7 @@ def get_by_id(request):
         
     try:
         participant = Participant.objects.get(id=participant_id)
-        
+
         last_name = ''
         first_name = participant.full_name
         if ' ' in participant.full_name:
@@ -314,7 +316,7 @@ def get_by_id(request):
             'subjects': participant.subject.split(', ') if participant.subject else [],
             'payment_type': participant.payment_type
         })
-    except Participant.DoesNotExist:
+    except (Participant.DoesNotExist, ValueError, ValidationError):
         return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
