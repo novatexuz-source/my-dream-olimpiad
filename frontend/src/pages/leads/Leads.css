@@ -484,19 +484,19 @@
 
 .leads-table {
   width: 100%;
-  min-width: 1150px;
+  min-width: 940px;
   border-collapse: separate;
   border-spacing: 0;
 }
 
 .leads-table th {
   background: #f8fafc;
-  padding: 16px 22px;
+  padding: 9px 12px;
   text-align: left;
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.05em;
   color: #64748b;
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
@@ -508,25 +508,25 @@
 }
 
 .table-row td {
-  padding: 14px 22px;
+  padding: 7px 12px;
   vertical-align: middle;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
 }
 
 /* Date divider row (groups leads by registration day) */
 .lead-date-divider-row td {
-  padding: 16px 22px 8px;
+  padding: 12px 12px 6px;
   background: #f8fafc;
   border-bottom: 1px solid #eef2f7;
 }
 .lead-date-divider {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   color: #1e3a6e;
   font-weight: 800;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
 }
 .lead-date-divider svg { color: #2b4d8f; flex-shrink: 0; }
 .lead-date-divider-label { letter-spacing: 0.4px; white-space: nowrap; }
@@ -557,15 +557,15 @@
 .td-num {
   color: #cbd5e1;
   font-weight: 700;
-  font-size: 0.82rem;
-  width: 50px;
+  font-size: 0.74rem;
+  width: 30px;
   font-family: 'Outfit', sans-serif;
 }
 
 .td-name {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   white-space: nowrap;
   font-weight: 700;
   color: #0f172a;
@@ -577,16 +577,16 @@
 }
 
 .name-avatar-gradient {
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
+  width: 27px;
+  height: 27px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   flex-shrink: 0;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
   box-shadow: 0 4px 10px rgba(99, 102, 241, 0.15);
@@ -610,7 +610,7 @@
 
 .td-date {
   color: #64748b;
-  font-size: 0.82rem;
+  font-size: 0.74rem;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -620,7 +620,7 @@
   color: #0f172a;
   white-space: nowrap;
   font-family: 'Outfit', sans-serif;
-  font-size: 0.92rem;
+  font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -631,9 +631,9 @@
 /* Grade Badge */
 .grade-badge {
   display: inline-block;
-  padding: 5px 11px;
-  border-radius: 8px;
-  font-size: 0.78rem;
+  padding: 3px 8px;
+  border-radius: 7px;
+  font-size: 0.7rem;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -657,8 +657,8 @@
 .subject-tags-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  max-width: 240px;
+  gap: 4px;
+  max-width: 160px;
 }
 
 .subject-tag {
@@ -666,9 +666,9 @@
   background: #f1f5f9;
   color: #334155;
   border: 1px solid #e2e8f0;
-  padding: 3px 9px;
-  border-radius: 7px;
-  font-size: 0.73rem;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.68rem;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -679,9 +679,9 @@
   background: #eef2ff;
   color: #4338ca;
   border: 1px solid #e0e7ff;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 7px;
+  font-size: 0.68rem;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -702,9 +702,9 @@
 /* Payment Badge */
 .payment-badge {
   display: inline-block;
-  padding: 5px 11px;
-  border-radius: 8px;
-  font-size: 0.78rem;
+  padding: 3px 8px;
+  border-radius: 7px;
+  font-size: 0.7rem;
   font-weight: 700;
 }
 .payment-badge.payment-click {
@@ -727,10 +727,10 @@
 .status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 5px 12px;
+  gap: 6px;
+  padding: 4px 9px;
   border-radius: 99px;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -782,12 +782,13 @@
   background: linear-gradient(135deg, #10b981, #059669);
   color: #ffffff;
   border: none;
-  padding: 7px 14px;
-  border-radius: 9px;
+  padding: 5px 10px;
+  border-radius: 8px;
   font-family: inherit;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s ease;
   box-shadow: 0 4px 10px -2px rgba(16, 185, 129, 0.35);
 }
@@ -801,12 +802,13 @@
   background: #ffffff;
   color: #ef4444;
   border: 1px solid #fecaca;
-  padding: 7px 12px;
-  border-radius: 9px;
+  padding: 5px 9px;
+  border-radius: 8px;
   font-family: inherit;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
