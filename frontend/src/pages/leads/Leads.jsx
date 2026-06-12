@@ -433,13 +433,15 @@ export default function Leads({ defaultStatus = 'all' }) {
                         <tr key={p.id} className="table-row" onClick={() => setSelected(p)}>
                           <td className="td-num">{idx}</td>
                     <td className="td-name">
-                      <div
-                        className="name-avatar-gradient"
-                        style={{ background: getAvatarGradient(p.full_name) }}
-                      >
-                        {p.full_name?.[0]?.toUpperCase() || '?'}
+                      <div className="name-cell">
+                        <div
+                          className="name-avatar-gradient"
+                          style={{ background: getAvatarGradient(p.full_name) }}
+                        >
+                          {p.full_name?.[0]?.toUpperCase() || '?'}
+                        </div>
+                        <span className="fullname-text">{p.full_name}</span>
                       </div>
-                      <span className="fullname-text">{p.full_name}</span>
                     </td>
                     <td className="td-phone">{p.phone}</td>
                     <td className="td-center">

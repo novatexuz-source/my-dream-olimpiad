@@ -563,12 +563,15 @@
 }
 
 .td-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   white-space: nowrap;
   font-weight: 700;
   color: #0f172a;
+}
+
+.name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .fullname-text {
@@ -653,12 +656,18 @@
   border: 1px solid rgba(147, 51, 234, 0.15);
 }
 
+/* Subjects column absorbs the table's leftover width so the #, name and
+   phone columns stay packed together on the left (no wide gaps). */
+.td-subject {
+  width: 100%;
+}
+
 /* Subject Tags */
 .subject-tags-container {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  max-width: 160px;
+  max-width: 220px;
 }
 
 .subject-tag {
